@@ -22,6 +22,7 @@ main
 - `type: 작업 내용` 형식으로 작성한다.
 - type: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`
 - 예: `feat: 신탁 계약 조회 API 추가`
+- 작업할 때마다 TASK 단위로 commit을 작게 나눠서 쌓는다. 하나의 커밋에 여러 TASK를 몰아넣지 않는다.
 
 ## 규칙
 
