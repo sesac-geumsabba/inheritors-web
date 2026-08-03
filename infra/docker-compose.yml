@@ -1,0 +1,22 @@
+services:
+  web:
+    build:
+      context: ../
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - ../apps/web/.env
+    depends_on:
+      - api
+
+  api:
+    build:
+      context: ../
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../apps/api/.env
+    # DB는 단일 인스턴스(Supabase 등)를 DATABASE_URL로 연결
+    # 법원/법제처 API 키도 이 env_file에서 관리
