@@ -36,8 +36,34 @@ git pull origin staging
 git checkout -b feat/{기능명}
 ```
 
+5. **작업 재개 시에도 주기적으로 rebase**: 브랜치를 오래 들고 작업할 경우, 하루 시작할 때/작업을 다시 이어갈 때마다 `staging`을 fetch해서 rebase로 최신 상태를 유지한다. 절차는 아래 "PR 올리기 전 rebase"와 동일.
+
 ## PR 전 체크
 
 - 커밋을 기능 단위로 정리했는지 확인
 - `staging` 기준 최신화(rebase)했는지 확인
 - PR 대상 브랜치가 `staging`인지 확인 (`main` 아님)
+
+## 작업 중 / PR 올리기 전 rebase (충돌 예방)
+
+작업을 재개할 때, 그리고 PR을 올리기 전에는 그 사이 `staging`에 반영된 다른 사람의 변경사항을 미리 받아 충돌을 로컬에서 먼저 해결한다.
+
+```bash
+git fetch origin
+git rebase origin/staging
+```
+
+- **충돌 없음** → 그대로 `push` 후 PR 진행
+- **충돌 있음** → AI 자동 처리로 넘기지 말고 직접 파일을 열어 `staging`의 최신 내용 + 내가 작업한 내용이 함께 동작하도록 수정
+  ```bash
+  # 충돌난 파일 직접 수정
+  git add <파일>
+  git rebase --continue
+  ```
+- rebase는 커밋 히스토리를 다시 쓰므로, 이미 원격에 push했던 브랜치라면 이어서 강제 push가 필요하다.
+  ```bash
+  git push --force-with-lease
+  ```
+  (`--force`가 아닌 `--force-with-lease`를 쓴다. 내가 알던 원격 상태 그대로일 때만 덮어써서, 그 사이 다른 사람이 같은 브랜치에 push한 내용을 실수로 날리는 걸 막아준다.)
+
+> 단, 이 절차는 나만 작업하는 개인 feature 브랜치 기준이다. 다른 사람도 pull 받아 같이 쓰는 브랜치에는 force push를 하지 않는다.
