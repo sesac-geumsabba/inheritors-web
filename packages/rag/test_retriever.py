@@ -17,7 +17,12 @@ load_dotenv(Path(__file__).resolve().parents[2] / "apps" / "api" / ".env")
 
 from packages.rag.chains import NO_CONTEXT_THRESHOLD
 from packages.rag.embeddings import embed_query
-from packages.rag.retriever import search_chunks
+from packages.rag.retriever import (
+    detect_bank,
+    detect_contract_type,
+    search_chunks,
+    search_chunks_balanced,
+)
 
 RELATED_CASES = [
     "IBK 유언대용신탁 상품의 주요 특징이 뭐야?",
@@ -62,5 +67,50 @@ def main() -> None:
     print("[PASS] retriever threshold separation")
 
 
+def test_detect_metadata() -> None:
+    assert detect_bank("하나은행 계약서에서는 어떻게 되나요?") == "하나은행"
+    assert detect_bank("국민은행 상품이 궁금해요") == "KB국민은행"
+    assert detect_bank("기업은행에서 가입 가능한가요?") == "IBK기업은행"
+    assert detect_bank("신탁 수수료가 궁금해요") is None
+    assert detect_contract_type("부동산관리신탁 계약 내용 알려줘") == "부동산관리신탁"
+    assert detect_contract_type("일반적인 신탁 질문입니다") is None
+    print("[PASS] detect_bank / detect_contract_type")
+
+
+def test_category_balanced() -> None:
+    """카테고리별 top-k를 따로 조회해 합치므로, 특정 카테고리가 결과를 독식하지 않아야 함."""
+    engine = create_engine(os.environ["DATABASE_URL"])
+    db = sessionmaker(bind=engine)()
+
+    embedding = embed_query("유언대용신탁 관련해서 전반적으로 알려주세요")
+    results = search_chunks_balanced(db, embedding, per_category_k=3)
+    categories_hit = {c.category for c in results}
+    db.close()
+
+    assert len(results) <= 9, f"카테고리 3개 x k=3인데 {len(results)}건 나옴"
+    assert len(categories_hit) >= 2, f"카테고리 다양성이 없음: {categories_hit}"
+    print(f"[PASS] category-balanced retrieval (categories hit: {categories_hit})")
+
+
+def test_bank_filter() -> None:
+    """은행명이 감지되면 계약서 카테고리 결과가 전부 그 은행 문서로만 좁혀져야 함."""
+    engine = create_engine(os.environ["DATABASE_URL"])
+    db = sessionmaker(bind=engine)()
+
+    embedding = embed_query("하나은행 계약서에서는 중도해지 시 어떻게 되나요?")
+    results = search_chunks_balanced(db, embedding, per_category_k=3, bank="하나은행")
+    contract_results = [c for c in results if c.category == "계약서"]
+    db.close()
+
+    assert contract_results, "하나은행 계약서 카테고리 결과가 아예 없음"
+    assert all(c.bank == "하나은행" for c in contract_results), (
+        f"bank 필터를 걸었는데 다른 은행 문서가 섞임: {[c.bank for c in contract_results]}"
+    )
+    print("[PASS] bank-filtered contract search")
+
+
 if __name__ == "__main__":
     main()
+    test_detect_metadata()
+    test_category_balanced()
+    test_bank_filter()
