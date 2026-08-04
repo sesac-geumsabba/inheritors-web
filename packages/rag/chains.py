@@ -10,9 +10,10 @@ from sqlalchemy.orm import Session
 
 from packages.rag.retriever import DEFAULT_TOP_K, RetrievedChunk, search_chunks
 
-# ponytail: 스모크 테스트 기준값 — 무관 질의("저녁 메뉴") 0.372 vs 관련 질의("상속세 신고기한") 0.653.
-# 두 샘플만으로 정한 값이라 실제 질의 로그 쌓이면 재조정 필요.
-NO_CONTEXT_THRESHOLD = 0.45
+# ponytail: 설명서/계약서/상속증여세 3카테고리 + 경계(금융이지만 무관)/완전무관 질의 11개로 보정.
+# 관련 질의 top-1 최소 0.621, 무관·경계 질의 top-1 최대 0.442 — 그 사이 값으로 마진 확보.
+# 실제 질의 로그 쌓이면 재조정 필요 (test_retriever.py의 CASES가 회귀 체크 역할).
+NO_CONTEXT_THRESHOLD = 0.5
 NO_CONTEXT_MESSAGE = (
     "문의하신 내용과 관련된 자료를 찾지 못했습니다. "
     "다른 표현으로 다시 질문해 주시거나 은행 PB 상담을 이용해 주세요."
@@ -28,7 +29,7 @@ def _llm() -> ChatOllama:
     return ChatOllama(
         base_url=os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434"),
         model=os.environ.get(
-            "OLLAMA_MODEL", "hf.co/heegyu/EEVE-Korean-Instruct-10.8B-v1.0-GGUF:Q4_K_M"
+            "OLLAMA_MODEL", "hf.co/gchrisoh/EEVE-Korean-Instruct-10.8B-v1.0-Q4_K_M-GGUF"
         ),
         temperature=0.2,
     )
