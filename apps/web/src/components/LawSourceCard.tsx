@@ -15,15 +15,15 @@ interface LawSourceCardProps {
 
 export const LawSourceCard: React.FC<LawSourceCardProps> = ({ source }) => {
   const isStatute = source.source_type === "statute";
-  const badgeColor = isStatute
-    ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-    : "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
-  const badgeText = isStatute ? "법령/조문" : "판례";
+  const badgeTextColor = isStatute
+    ? "text-blue-600 dark:text-blue-400"
+    : "text-purple-600 dark:text-purple-400";
+  const badgeText = isStatute ? "[법령/조문]" : "[판례]";
 
   return (
     <div className="p-4 mb-3 border rounded-lg shadow-sm bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
       <div className="flex items-center justify-between mb-2">
-        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${badgeColor}`}>
+        <span className={`text-xs font-semibold ${badgeTextColor}`}>
           {badgeText}
         </span>
         {source.rank && (
