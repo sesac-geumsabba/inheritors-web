@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 const TABS = [
   { href: "/prototype/start", label: "오늘의 배움", icon: "school" },
   { href: null, label: "복습하기", icon: "history_edu" },
-  { href: "/prototype/chat", label: "상담소", icon: "chat_bubble" },
+  { href: "/chat", label: "상담소", icon: "chat_bubble" },
   { href: null, label: "내 정보", icon: "person" },
 ] as const;
 
