@@ -18,5 +18,18 @@ services:
       - "8000:8000"
     env_file:
       - ../apps/api/.env
+    depends_on:
+      - ollama
     # DB는 단일 인스턴스(Supabase 등)를 DATABASE_URL로 연결
     # 법원/법제처 API 키도 이 env_file에서 관리
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    # 최초 기동 후 1회: docker compose exec ollama ollama pull hf.co/heegyu/EEVE-Korean-Instruct-10.8B-v1.0-GGUF:Q4_K_M
+
+volumes:
+  ollama_models:
