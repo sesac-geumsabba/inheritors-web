@@ -101,6 +101,7 @@ def stream_answer(
     query_embedding: list[float],
     top_k: int = DEFAULT_TOP_K,
     external_sources: list[dict] | None = None,
+    skip_internal: bool = False,
 ) -> tuple[Iterator[str], list[RetrievedChunk]]:
     """답변 토큰 스트림과, message_sources 기록용으로 실제 인용된 내부 청크 목록을 함께 반환.
 
@@ -108,9 +109,12 @@ def stream_answer(
     (같은 질의를 두 번 임베딩하지 않기 위해).
     external_sources는 packages/legal-mcp 등에서 가져온 판례/법령 결과
     ({source_type, title, url, snippet, score, rank} dict 리스트, chat_router에서 조립).
+    skip_internal=True면 내부 문서 검색 자체를 안 함 — 순수 판례 질의는 내부 DB(신탁 상품
+    설명서/계약서)에 실제 판례 원문이 없어서, 의미상 비슷해 보이는(예: "유류분" 언급) 상품
+    안내 문구가 판례 대신 인용되는 오답 유발 가능 (chat_router에서 판단해 전달).
     """
-    chunks = search_chunks(db, query_embedding, top_k)
     external_sources = external_sources or []
+    chunks = [] if skip_internal else search_chunks(db, query_embedding, top_k)
 
     has_internal = bool(chunks) and chunks[0].score >= NO_CONTEXT_THRESHOLD
     if not has_internal and not external_sources:
