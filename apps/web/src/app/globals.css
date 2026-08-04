@@ -1,0 +1,121 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+}
+
+/*
+ * Tailwind's global preflight is disabled (see tailwind.config.js) so the
+ * existing plain-CSS "/" chat page keeps its current box model untouched.
+ * Every Tailwind utility here still assumes preflight's resets though (most
+ * of all: border-box), so re-apply the subset that matters, scoped to
+ * .prototype-shell only.
+ */
+.prototype-shell,
+.prototype-shell *,
+.prototype-shell *::before,
+.prototype-shell *::after {
+  box-sizing: border-box;
+  border-width: 0;
+  border-style: solid;
+  border-color: currentColor;
+}
+
+.prototype-shell blockquote,
+.prototype-shell dl,
+.prototype-shell dd,
+.prototype-shell h1,
+.prototype-shell h2,
+.prototype-shell h3,
+.prototype-shell h4,
+.prototype-shell h5,
+.prototype-shell h6,
+.prototype-shell hr,
+.prototype-shell figure,
+.prototype-shell p,
+.prototype-shell pre {
+  margin: 0;
+}
+
+.prototype-shell h1,
+.prototype-shell h2,
+.prototype-shell h3,
+.prototype-shell h4,
+.prototype-shell h5,
+.prototype-shell h6 {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.prototype-shell ol,
+.prototype-shell ul,
+.prototype-shell menu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.prototype-shell a {
+  color: inherit;
+  text-decoration: inherit;
+}
+
+.prototype-shell button,
+.prototype-shell input,
+.prototype-shell textarea,
+.prototype-shell select {
+  font: inherit;
+  color: inherit;
+  margin: 0;
+  padding: 0;
+}
+
+.prototype-shell button {
+  appearance: button;
+  background-color: transparent;
+  background-image: none;
+  text-transform: none;
+  cursor: pointer;
+}
+
+/* OnboardingModal renders app-wide (outside .prototype-shell too), so it
+   needs its own border-box fix wherever it combines w-full with padding. */
+.onboarding-card {
+  box-sizing: border-box;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+.icon-fill {
+  font-variation-settings: "FILL" 1;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.streaming-cursor::after {
+  content: "|";
+  animation: blink 1s step-end infinite;
+  color: theme("colors.tertiary");
+  margin-left: 2px;
+}
