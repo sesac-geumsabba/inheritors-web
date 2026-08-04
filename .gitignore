@@ -2,6 +2,7 @@ node_modules/
 .next/
 dist/
 .turbo/
+*.tsbuildinfo
 
 __pycache__/
 *.pyc
