@@ -1,11 +1,25 @@
 import asyncio
 import json
 import os
-import sys
+import subprocess
 from typing import Any, Dict, List, Optional
 
-# Default node script path or fallback command
-DEFAULT_SCRIPT_PATH = r"C:/Users/richc/AppData/Roaming/npm/node_modules/korean-law-mcp/build/index.js"
+
+def _resolve_script_path() -> str:
+    """npm 전역 설치 경로에서 korean-law-mcp 진입 스크립트를 찾는다.
+    (Windows에서 bin 커맨드를 직접 exec하면 .cmd 래퍼 문제로 실패해서 node+스크립트 경로 방식을 씀)
+    KOREAN_LAW_MCP_SCRIPT_PATH 환경변수가 있으면 이 탐색은 건너뛴다."""
+    try:
+        result = subprocess.run(
+            ["npm", "root", "-g"], capture_output=True, text=True, timeout=5, shell=True
+        )
+        npm_root = result.stdout.strip()
+        candidate = os.path.join(npm_root, "korean-law-mcp", "build", "index.js")
+        if npm_root and os.path.exists(candidate):
+            return candidate
+    except Exception:
+        pass
+    return ""
 
 
 class KoreanLawMCPClient:
@@ -13,7 +27,8 @@ class KoreanLawMCPClient:
 
     def __init__(self, command: Optional[str] = None, args: Optional[List[str]] = None, law_oc: Optional[str] = None):
         self.command = command or os.getenv("KOREAN_LAW_MCP_COMMAND", "node")
-        self.args = args or [os.getenv("KOREAN_LAW_MCP_SCRIPT_PATH", DEFAULT_SCRIPT_PATH)]
+        script_path = os.getenv("KOREAN_LAW_MCP_SCRIPT_PATH") or _resolve_script_path()
+        self.args = args or [script_path]
         self.law_oc = law_oc or os.getenv("LAW_OC", "inheritors")
 
     async def _call_tool(self, tool_name: str, arguments: Dict[str, Any], timeout: float = 3.0) -> Dict[str, Any]:
@@ -108,7 +123,7 @@ class KoreanLawMCPClient:
         resp = await self._call_tool("search_law", {"query": query}, timeout=timeout)
         if "error" in resp:
             return [{"source_type": "statute", "title": query, "url": "", "snippet": f"검색 중 오류 발생 또는 타임아웃: {resp.get('message')}", "score": 0.0, "rank": 1}]
-        
+
         result = resp.get("result", {})
         content = result.get("content", [])
         sources = []
@@ -146,8 +161,14 @@ class KoreanLawMCPClient:
         return sources or [{"source_type": "case_law", "title": query, "url": "", "snippet": "관련 판례를 찾을 수 없습니다.", "score": 0.0, "rank": 1}]
 
     async def verify_citations(self, text: str, timeout: float = 3.0) -> Dict[str, Any]:
-        """Verify statutory and precedent citations in generated text using verify_citations tool."""
-        resp = await self._call_tool("verify_citations", {"text": text}, timeout=timeout)
+        """Verify statutory/precedent citations via legal_analysis(mode=verify_citations).
+
+        korean-law-mcp v4.6.0부터 독립 도구였던 verify_citations가 legal_analysis의 mode로
+        통합됨 (실측: tools/list에 verify_citations 없음, legal_analysis만 존재).
+        """
+        resp = await self._call_tool(
+            "legal_analysis", {"mode": "verify_citations", "text": text}, timeout=timeout
+        )
         if "error" in resp:
             return {"verified": False, "details": resp.get("message")}
 

@@ -1,54 +1,152 @@
-from typing import Any, Dict, List
-from fastapi import APIRouter
-from pydantic import BaseModel
+import asyncio
+import json
+from collections.abc import Iterator
 
+from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+
+from app.chat import ChatRequest
+from app.db import get_db
 from app.mcp_client import KoreanLawMCPClient
+from packages.rag.chains import stream_answer
+from packages.rag.embeddings import embed_query
+from packages.rag.retriever import RetrievedChunk, to_vector_literal
 
-router = APIRouter(prefix="/api/chat", tags=["Chatbot"])
+router = APIRouter(prefix="/chat", tags=["Chat"])
 mcp_client = KoreanLawMCPClient()
 
-
-class ChatRequest(BaseModel):
-    message: str
-
-
-class ChatResponse(BaseModel):
-    answer: str
-    sources: List[Dict[str, Any]]
+_PRECEDENT_KEYWORDS = ["판례", "사건", "판결", "대법원", "지방법원"]
+_LAW_KEYWORDS = ["법", "조문", "신탁", "상속", "증여"]
 
 
-@router.post("", response_model=ChatResponse, summary="챗봇 메시지 전송 및 MCP 법령/판례 연동")
-async def chat_endpoint(req: ChatRequest) -> ChatResponse:
-    """사용자의 챗봇 질문을 수신하여 MCP로 법령/판례를 조회하고 정제된 답변과 출처 카드 목록을 반환합니다."""
-    query = req.message.strip()
-    sources: List[Dict[str, Any]] = []
+def _create_session(db: Session) -> int:
+    session_id = db.execute(
+        text("INSERT INTO chat_sessions DEFAULT VALUES RETURNING id")
+    ).scalar_one()
+    db.commit()
+    return session_id
 
-    if not query:
-        return ChatResponse(answer="질문을 입력해 주세요.", sources=[])
 
-    is_precedent_query = any(k in query for k in ["판례", "사건", "판결", "대법원", "지방법원"])
-    is_law_query = any(k in query for k in ["법", "조문", "신탁", "상속", "증여"])
+def _save_message(
+    db: Session, session_id: int, role: str, content: str, embedding: list[float] | None
+) -> int:
+    embedding_literal = to_vector_literal(embedding) if embedding is not None else None
+    message_id = db.execute(
+        text(
+            "INSERT INTO chat_messages (session_id, role, content, embedding) "
+            "VALUES (:session_id, :role, :content, CAST(:embedding AS vector)) RETURNING id"
+        ),
+        {"session_id": session_id, "role": role, "content": content, "embedding": embedding_literal},
+    ).scalar_one()
+    db.commit()
+    return message_id
 
-    if is_precedent_query and not is_law_query:
-        sources = await mcp_client.search_decisions(query)
-    elif is_law_query and not is_precedent_query:
-        sources = await mcp_client.search_law(query)
-    else:
-        # 두 영역 모두 포함된 질의인 경우 병렬 호출
-        laws = await mcp_client.search_law(query)
-        decisions = await mcp_client.search_decisions(query)
-        sources = (laws[:2] if laws else []) + (decisions[:2] if decisions else [])
 
-    statute_count = sum(1 for s in sources if s.get("source_type") == "statute")
-    case_count = sum(1 for s in sources if s.get("source_type") == "case_law")
+def _save_internal_sources(db: Session, message_id: int, chunks: list[RetrievedChunk]) -> None:
+    for rank, chunk in enumerate(chunks, start=1):
+        db.execute(
+            text(
+                "INSERT INTO message_sources (message_id, source_type, chunk_id, title, score, rank) "
+                "VALUES (:message_id, 'internal_chunk', :chunk_id, :title, :score, :rank)"
+            ),
+            {
+                "message_id": message_id,
+                "chunk_id": chunk.chunk_id,
+                "title": chunk.file_name,
+                "score": chunk.score,
+                "rank": rank,
+            },
+        )
+    db.commit()
 
-    answer_parts = [f"안녕하세요! 요청하신 '{query}' 관련 대한민국 법제처 및 대법원 판례 검색 결과입니다.\n"]
-    if statute_count > 0:
-        answer_parts.append(f"• 📜 법령 정보: 관련 조문 및 법률 데이터 {statute_count}건이 검색되었습니다.")
-    if case_count > 0:
-        answer_parts.append(f"• ⚖️ 판례 정보: 대법원 및 하급심 판결 데이터 {case_count}건이 조회되었습니다.")
 
-    answer_parts.append("\n자세한 조문 내용 및 사건번호 정보는 아래 출처 카드를 참고해 주세요.")
-    answer = "\n".join(answer_parts)
+def _save_external_sources(db: Session, message_id: int, sources: list[dict]) -> None:
+    for rank, s in enumerate(sources, start=1):
+        db.execute(
+            text(
+                "INSERT INTO message_sources (message_id, source_type, title, url, snippet, score, rank) "
+                "VALUES (:message_id, :source_type, :title, :url, :snippet, :score, :rank)"
+            ),
+            {
+                "message_id": message_id,
+                "source_type": s["source_type"],
+                "title": s.get("title", ""),
+                "url": s.get("url") or None,
+                "snippet": s.get("snippet", ""),
+                "score": s.get("score"),
+                "rank": rank,
+            },
+        )
+    db.commit()
 
-    return ChatResponse(answer=answer, sources=sources)
+
+async def _fetch_external_sources(query: str) -> list[dict]:
+    """판례/법령 관련 질의로 보이면 korean-law-mcp를 병렬 호출. 관련 없어 보이면 스킵."""
+    is_precedent = any(k in query for k in _PRECEDENT_KEYWORDS)
+    is_law = any(k in query for k in _LAW_KEYWORDS)
+    if not is_precedent and not is_law:
+        return []
+
+    tasks = []
+    if is_law:
+        tasks.append(mcp_client.search_law(query))
+    if is_precedent:
+        tasks.append(mcp_client.search_decisions(query))
+
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    sources: list[dict] = []
+    for r in results:
+        if isinstance(r, Exception):
+            continue
+        # mcp_client는 오류/결과없음도 score=0.0 항목으로 반환 — 답변 근거로 못 쓰니 걸러냄
+        sources.extend(s for s in r if s.get("score", 0) > 0)
+    return sources
+
+
+@router.post("")
+async def chat(req: ChatRequest, db: Session = Depends(get_db)) -> StreamingResponse:
+    session_id = req.session_id or _create_session(db)
+    query_embedding = embed_query(req.message)
+    _save_message(db, session_id, "user", req.message, query_embedding)
+
+    external_sources = await _fetch_external_sources(req.message)
+    tokens, chunks = stream_answer(db, req.message, query_embedding, external_sources=external_sources)
+
+    def event_stream() -> Iterator[str]:
+        sse_sources = [
+            {
+                "source_type": "internal_chunk",
+                "title": c.file_name,
+                "page": c.page,
+                "url": None,
+                "score": round(c.score, 3),
+                "snippet": c.content[:120],
+            }
+            for c in chunks
+        ] + [
+            {
+                "source_type": s["source_type"],
+                "title": s.get("title", ""),
+                "page": None,
+                "url": s.get("url") or None,
+                "score": s.get("score"),
+                "snippet": s.get("snippet", "")[:200],
+            }
+            for s in external_sources
+        ]
+        yield f"event: sources\ndata: {json.dumps(sse_sources, ensure_ascii=False)}\n\n"
+
+        parts: list[str] = []
+        for token in tokens:
+            parts.append(token)
+            # SSE는 data 라인 안에 개행이 오면 각 줄마다 "data: "를 다시 붙여야 한다.
+            yield "data: " + token.replace("\n", "\ndata: ") + "\n\n"
+
+        message_id = _save_message(db, session_id, "assistant", "".join(parts), None)
+        _save_internal_sources(db, message_id, chunks)
+        _save_external_sources(db, message_id, external_sources)
+        yield f"event: done\ndata: {{\"session_id\": {session_id}}}\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
