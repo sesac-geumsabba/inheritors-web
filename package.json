@@ -1,6 +1,7 @@
 {
   "name": "inheritors-web",
   "private": true,
+  "packageManager": "npm@10.8.2",
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -13,3 +14,4 @@
     "turbo": "^2.0.0"
   }
 }
+
