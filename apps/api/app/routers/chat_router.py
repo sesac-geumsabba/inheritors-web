@@ -18,7 +18,23 @@ router = APIRouter(prefix="/chat", tags=["Chat"])
 mcp_client = KoreanLawMCPClient()
 
 _PRECEDENT_KEYWORDS = ["판례", "사건", "판결", "대법원", "지방법원"]
-_LAW_KEYWORDS = ["법", "조문", "신탁", "상속", "증여"]
+_LAW_KEYWORDS = ["법", "조문", "신탁", "상속", "증여", "유류분"]
+
+# ponytail: 법제처 검색 API는 공백구분 키워드를 AND로 처리해서 자연어 질문을 그대로 넣으면
+# 거의 항상 0건 (실측 확인). "유언대용신탁과 유류분" 같은 압축 표현도 실패하고,
+# "신탁 유류분"처럼 기본 법률용어로 쪼개야 매칭됨 — 분류용 키워드와 별도로 검색어 후보를 둔다.
+# search_law(법령명 검색)에 "판례"/"대법원" 같은 판례 전용어를 섞으면 그것도 0건이 돼서
+# (실측 확인) 도메인별로 후보 단어 집합을 분리한다. search_law는 법령 "제목" 매칭이라
+# "유류분"처럼 실제 법령명에 안 쓰이는 단어를 AND로 섞으면 여전히 0건이라
+# (실측: "신탁 유류분"도 실패) 첫 매칭어 하나만 사용 — search_decisions(판례 전문검색)는
+# 여러 단어 AND가 오히려 정확도를 높여서 그대로 둠.
+_LAW_SEARCH_TERMS = ["신탁", "상속", "증여", "유류분", "수익자", "위탁자"]
+_PRECEDENT_SEARCH_TERMS = _LAW_SEARCH_TERMS + ["판례", "대법원", "지방법원"]
+
+
+def _build_mcp_query(query: str, terms: list[str], max_terms: int | None = None) -> str:
+    matched = [t for t in terms if t in query]
+    return " ".join(matched[:max_terms] if max_terms else matched) if matched else query
 
 
 def _create_session(db: Session) -> int:
@@ -91,9 +107,10 @@ async def _fetch_external_sources(query: str) -> list[dict]:
 
     tasks = []
     if is_law:
-        tasks.append(mcp_client.search_law(query))
+        tasks.append(mcp_client.search_law(_build_mcp_query(query, _LAW_SEARCH_TERMS, max_terms=1)))
     if is_precedent:
-        tasks.append(mcp_client.search_decisions(query))
+        mcp_query = _build_mcp_query(query, _PRECEDENT_SEARCH_TERMS)
+        tasks.append(mcp_client.search_decisions(mcp_query))
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
     sources: list[dict] = []
