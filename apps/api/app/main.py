@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.routers.chat_router import router as chat_router
+from app.routers.mcp_router import router as mcp_router
 from app.routers.quick_buttons_router import router as quick_buttons_router
 from packages.rag.chains import warm_up
 from packages.rag.embeddings import embed_query
@@ -40,6 +41,7 @@ app.add_middleware(
 )
 
 app.include_router(quick_buttons_router)
+app.include_router(mcp_router)
 app.include_router(chat_router)
 
 
@@ -52,4 +54,3 @@ def health() -> dict[str, str]:
 def health_db(db: Session = Depends(get_db)) -> dict[str, str]:
     db.execute(text("SELECT 1"))
     return {"status": "ok"}
-

@@ -21,9 +21,9 @@ NO_CONTEXT_MESSAGE = (
 )
 
 SYSTEM_PROMPT = """당신은 유언대용신탁 상담 챗봇입니다.
-아래 [문서]에 있는 내용만 근거로 답변하세요. [문서]에 없는 내용은 추측하거나 지어내지 말고 모른다고 답하세요.
+아래 [문서]와 [법령/판례]에 있는 내용만 근거로 답변하세요. 거기 없는 내용은 추측하거나 지어내지 말고 모른다고 답하세요.
 답변 마지막에 "신뢰도: 90%" 같은 confidence score를 절대 붙이지 마세요. 그런 수치는 근거가 없습니다.
-답변은 본 서비스가 법률/세무 자문이 아닌 정보 제공 목적임을 자연스럽게 밝히고, 참고한 문서명을 함께 표시하세요."""
+답변은 본 서비스가 법률/세무 자문이 아닌 정보 제공 목적임을 자연스럽게 밝히고, 참고한 문서명/법령명/사건번호를 함께 표시하세요."""
 
 
 @lru_cache(maxsize=1)
@@ -87,23 +87,43 @@ def _build_context(chunks: list[RetrievedChunk]) -> str:
     )
 
 
+def _build_external_context(sources: list[dict]) -> str:
+    label = {"statute": "법령", "case_law": "판례"}
+    return "\n\n".join(
+        f"[{label.get(s.get('source_type'), '외부자료')}] {s.get('title', '')}\n{s.get('snippet', '')}"
+        for s in sources
+    )
+
+
 def stream_answer(
     db: Session,
     query: str,
     query_embedding: list[float],
     top_k: int = DEFAULT_TOP_K,
+    external_sources: list[dict] | None = None,
 ) -> tuple[Iterator[str], list[RetrievedChunk]]:
-    """답변 토큰 스트림과, message_sources 기록용으로 실제 인용된 청크 목록을 함께 반환.
+    """답변 토큰 스트림과, message_sources 기록용으로 실제 인용된 내부 청크 목록을 함께 반환.
 
     query_embedding은 호출 측(라우터)이 이미 계산해 chat_messages 저장에도 쓰는 값을 그대로 받는다
     (같은 질의를 두 번 임베딩하지 않기 위해).
+    external_sources는 packages/legal-mcp 등에서 가져온 판례/법령 결과
+    ({source_type, title, url, snippet, score, rank} dict 리스트, chat_router에서 조립).
     """
     chunks = search_chunks(db, query_embedding, top_k)
-    if not chunks or chunks[0].score < NO_CONTEXT_THRESHOLD:
+    external_sources = external_sources or []
+
+    has_internal = bool(chunks) and chunks[0].score >= NO_CONTEXT_THRESHOLD
+    if not has_internal and not external_sources:
         return iter([NO_CONTEXT_MESSAGE]), []
 
+    context_parts = []
+    if has_internal:
+        context_parts.append("[문서]\n" + _build_context(chunks))
+    if external_sources:
+        context_parts.append("[법령/판례]\n" + _build_external_context(external_sources))
+
     messages = [
-        SystemMessage(content=f"{SYSTEM_PROMPT}\n\n[문서]\n{_build_context(chunks)}"),
+        SystemMessage(content=f"{SYSTEM_PROMPT}\n\n{chr(10).join(context_parts)}"),
         HumanMessage(content=query),
     ]
 
@@ -112,4 +132,4 @@ def stream_answer(
             if chunk.content:
                 yield chunk.content
 
-    return _strip_confidence_score(_tokens()), chunks
+    return _strip_confidence_score(_tokens()), (chunks if has_internal else [])

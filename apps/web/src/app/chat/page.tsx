@@ -5,11 +5,19 @@ import TopAppBar from "@/components/TopAppBar";
 import BottomNavBar from "@/components/BottomNavBar";
 
 interface ChatSource {
+  source_type: "internal_chunk" | "case_law" | "statute";
   title: string;
   page: number | null;
+  url: string | null;
   score: number;
   snippet: string;
 }
+
+const SOURCE_ICON: Record<ChatSource["source_type"], string> = {
+  internal_chunk: "description",
+  case_law: "gavel",
+  statute: "menu_book",
+};
 
 interface ChatMessage {
   id: string;
@@ -175,10 +183,21 @@ export default function ChatPage() {
                         {msg.sources.map((s, i) => (
                           <li key={i} className="flex items-start gap-2">
                             <span className="material-symbols-outlined mt-1 text-[18px] text-outline">
-                              description
+                              {SOURCE_ICON[s.source_type]}
                             </span>
                             <span className="flex-1 text-body-md font-body-md leading-snug text-on-surface-variant">
-                              {s.title}
+                              {s.url ? (
+                                <a
+                                  href={s.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-secondary underline underline-offset-2"
+                                >
+                                  {s.title}
+                                </a>
+                              ) : (
+                                s.title
+                              )}
                               {s.page ? ` p.${s.page}` : ""} · 유사도 {s.score}
                             </span>
                           </li>
