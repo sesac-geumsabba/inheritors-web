@@ -48,10 +48,20 @@
 4. **임베딩 모델**: `BAAI/bge-m3` (다국어, 1024차원, `sentence-transformers`로 로드)
 5. **DB 적재** (`load_to_db.py`, Supabase Postgres): `documents` 12건, `chunks` 209건 임베딩 포함 적재 완료
 
-## 다음 단계 (미착수)
+## 진행 상태
 
-기능별 상세 작업은 위 "기능별 개발 이슈" 표의 각 문서 참고. RAG 파이프라인 공통으로 필요한 것만 요약:
+기능별 상세 작업은 위 "기능별 개발 이슈" 표의 각 문서 참고. RAG 파이프라인 관련 상세 진행상황·정확도 실측치는 [docs/RAG.md](./RAG.md) 참고.
 
-- LangChain 커스텀 리트리버: `chunks.embedding`을 pgvector `<=>` 유사도로 검색하는 `BaseRetriever` 구현 (FN-CORE-02)
+### 완료
+
+- pgvector `<=>` 코사인 유사도로 `chunks.embedding` 검색하는 리트리버 (FN-CORE-02)
 - 검색 결과를 `message_sources`(score/rank 포함)에 기록하는 로직 (FN-CORE-02)
-- MCP(법원 판례 API·법제처 API) 연동 및 `source_type='case_law'/'statute'` 케이스 처리 (FN-CORE-02)
+- 내부 문서 기반 RAG 체인 + Ollama(EEVE-Korean) 스트리밍 응답, no-context 임계값 폴백 (FN-CORE-02)
+- `feat/rag-chatbot` 브랜치에서 `/prototype/chat` 프론트 연동까지 완료, 로컬 end-to-end 테스트 완료 (아직 staging PR 전)
+
+### 다음 단계 (미착수)
+
+- MCP(법원 판례 API·법제처 API) 연동 및 `source_type='case_law'/'statute'` 케이스 처리 (FN-CORE-04)
+- MCP 타임아웃 폴백, 스미싱 감지 예외 처리 (FN-CORE-02 원 스펙)
+- EC2 배포용 Ollama+모델 Docker 이미지 빌드 및 ECR 배포 (상세는 [docs/RAG.md](./RAG.md) 6절)
+- `feat/rag-chatbot` → `staging` PR
