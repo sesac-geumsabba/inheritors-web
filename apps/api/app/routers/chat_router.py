@@ -1,3 +1,4 @@
+import json
 from collections.abc import Iterator
 
 from fastapi import APIRouter, Depends
@@ -64,6 +65,17 @@ def chat(req: ChatRequest, db: Session = Depends(get_db)) -> StreamingResponse:
     tokens, chunks = stream_answer(db, req.message, query_embedding)
 
     def event_stream() -> Iterator[str]:
+        sources = [
+            {
+                "title": c.file_name,
+                "page": c.page,
+                "score": round(c.score, 3),
+                "snippet": c.content[:120],
+            }
+            for c in chunks
+        ]
+        yield f"event: sources\ndata: {json.dumps(sources, ensure_ascii=False)}\n\n"
+
         parts: list[str] = []
         for token in tokens:
             parts.append(token)

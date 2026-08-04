@@ -2,6 +2,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -28,6 +29,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="유언대용신탁 자산승계 설계 챗봇 API", lifespan=lifespan)
+
+# ponytail: 로컬 프로토타입 테스트용으로 넓게 허용. 실배포 시 NEXT_PUBLIC_API_BASE_URL에
+# 대응하는 실제 프론트 도메인으로 좁혀야 함.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(quick_buttons_router)
 app.include_router(chat_router)
