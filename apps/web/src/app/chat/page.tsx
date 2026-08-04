@@ -46,7 +46,7 @@ const QUICK_ACTIONS = [
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
 
-export default function PrototypeChatPage() {
+export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "welcome",
@@ -132,6 +132,8 @@ export default function PrototypeChatPage() {
     }
   }
 
+  const lastMessageId = messages[messages.length - 1]?.id;
+
   return (
     <div className="flex min-h-[max(884px,100dvh)] flex-col">
       <TopAppBar />
@@ -159,7 +161,11 @@ export default function PrototypeChatPage() {
                 </div>
                 <div className="flex w-full max-w-[85%] flex-col gap-3">
                   <div className="rounded-2xl rounded-tl-sm bg-tertiary-fixed p-5 text-on-tertiary-fixed shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
-                    <p className="whitespace-pre-wrap text-body-lg font-body-lg">
+                    <p
+                      className={`whitespace-pre-wrap text-body-lg font-body-lg ${
+                        isStreaming && msg.id === lastMessageId ? "streaming-cursor" : ""
+                      }`}
+                    >
                       {msg.content || (isStreaming ? "생각하는 중..." : "")}
                     </p>
                   </div>
