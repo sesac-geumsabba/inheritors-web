@@ -12,72 +12,91 @@ body {
  * Every Tailwind utility here still assumes preflight's resets though (most
  * of all: border-box), so re-apply the subset that matters, scoped to
  * .prototype-shell only.
+ *
+ * Two things had to match real Tailwind preflight exactly, or utility classes
+ * on buttons/links silently lose to this reset regardless of source order:
+ *
+ * 1. @layer base — @layer utilities is declared after @layer base, so
+ *    utilities always win on equal specificity. Without a layer this plain
+ *    CSS sits outside every @layer and (per the CSS cascade layers spec)
+ *    beats ALL layered rules unconditionally, no matter the ordering.
+ * 2. :where(.prototype-shell) instead of a bare .prototype-shell prefix —
+ *    prefixing with a class adds one to the selector's specificity, so
+ *    `.prototype-shell button { color: inherit }` (0,1,1) was silently
+ *    beating a plain utility class like `.text-brand-pink` (0,1,0) even
+ *    inside @layer base. Real Tailwind preflight has no such prefix
+ *    (plain `button { ... }` is 0,0,1, always below any class utility).
+ *    :where() contributes zero specificity, so wrapping the scope in it
+ *    reproduces that same balance. Confirmed via computed style (fixed) —
+ *    text-brand-pink on a <button> was rendering as text-on-surface before.
  */
-.prototype-shell,
-.prototype-shell *,
-.prototype-shell *::before,
-.prototype-shell *::after {
-  box-sizing: border-box;
-  border-width: 0;
-  border-style: solid;
-  border-color: currentColor;
-}
+@layer base {
+  :where(.prototype-shell),
+  :where(.prototype-shell) *,
+  :where(.prototype-shell) *::before,
+  :where(.prototype-shell) *::after {
+    box-sizing: border-box;
+    border-width: 0;
+    border-style: solid;
+    border-color: currentColor;
+  }
 
-.prototype-shell blockquote,
-.prototype-shell dl,
-.prototype-shell dd,
-.prototype-shell h1,
-.prototype-shell h2,
-.prototype-shell h3,
-.prototype-shell h4,
-.prototype-shell h5,
-.prototype-shell h6,
-.prototype-shell hr,
-.prototype-shell figure,
-.prototype-shell p,
-.prototype-shell pre {
-  margin: 0;
-}
+  :where(.prototype-shell) blockquote,
+  :where(.prototype-shell) dl,
+  :where(.prototype-shell) dd,
+  :where(.prototype-shell) h1,
+  :where(.prototype-shell) h2,
+  :where(.prototype-shell) h3,
+  :where(.prototype-shell) h4,
+  :where(.prototype-shell) h5,
+  :where(.prototype-shell) h6,
+  :where(.prototype-shell) hr,
+  :where(.prototype-shell) figure,
+  :where(.prototype-shell) p,
+  :where(.prototype-shell) pre {
+    margin: 0;
+  }
 
-.prototype-shell h1,
-.prototype-shell h2,
-.prototype-shell h3,
-.prototype-shell h4,
-.prototype-shell h5,
-.prototype-shell h6 {
-  font-size: inherit;
-  font-weight: inherit;
-}
+  :where(.prototype-shell) h1,
+  :where(.prototype-shell) h2,
+  :where(.prototype-shell) h3,
+  :where(.prototype-shell) h4,
+  :where(.prototype-shell) h5,
+  :where(.prototype-shell) h6 {
+    font-size: inherit;
+    font-weight: inherit;
+  }
 
-.prototype-shell ol,
-.prototype-shell ul,
-.prototype-shell menu {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
+  :where(.prototype-shell) ol,
+  :where(.prototype-shell) ul,
+  :where(.prototype-shell) menu {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
 
-.prototype-shell a {
-  color: inherit;
-  text-decoration: inherit;
-}
+  :where(.prototype-shell) a {
+    color: inherit;
+    text-decoration: inherit;
+  }
 
-.prototype-shell button,
-.prototype-shell input,
-.prototype-shell textarea,
-.prototype-shell select {
-  font: inherit;
-  color: inherit;
-  margin: 0;
-  padding: 0;
-}
+  :where(.prototype-shell) button,
+  :where(.prototype-shell) input,
+  :where(.prototype-shell) textarea,
+  :where(.prototype-shell) select {
+    font: inherit;
+    color: inherit;
+    margin: 0;
+    padding: 0;
+  }
 
-.prototype-shell button {
-  appearance: button;
-  background-color: transparent;
-  background-image: none;
-  text-transform: none;
-  cursor: pointer;
+  :where(.prototype-shell) button {
+    appearance: button;
+    background-color: transparent;
+    background-image: none;
+    text-transform: none;
+    cursor: pointer;
+  }
 }
 
 /* OnboardingModal renders app-wide (outside .prototype-shell too), so it
