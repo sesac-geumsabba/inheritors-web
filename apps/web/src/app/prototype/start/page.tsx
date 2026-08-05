@@ -48,7 +48,7 @@ export default function PrototypeStartPage() {
 
             <div className="mt-auto pb-4 pt-6">
               <Link
-                href="/chat"
+                href="/prototype/chat"
                 className="flex min-h-[56px] w-full items-center justify-center gap-2 rounded-xl bg-[#f85029] text-headline-sm font-headline-sm text-white shadow-md transition-transform hover:bg-primary active:scale-[0.98]"
               >
                 <span>시작하기</span>

@@ -8,10 +8,12 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.mcp_client import mcp_client
+from app.routers.chat_openai_router import router as chat_openai_router
 from app.routers.chat_router import router as chat_router
 from app.routers.mcp_router import router as mcp_router
 from packages.rag.chains import warm_up
 from packages.rag.embeddings import embed_query
+from packages.rag.openai_chains import warm_up as openai_warm_up
 
 
 @asynccontextmanager
@@ -25,7 +27,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
         warm_up()
     except Exception as e:
-        print(f"[warn] Ollama warm-up 실패, 첫 /chat 요청이 콜드 로드될 수 있음: {e}")
+        print(f"[warn] Ollama warm-up 실패, 첫 /prototype/chat 요청이 콜드 로드될 수 있음: {e}")
+    try:
+        openai_warm_up()
+    except Exception as e:
+        print(f"[warn] OpenAI warm-up 실패 — OPENAI_API_KEY 확인 필요, 첫 /chat 요청이 실패할 수 있음: {e}")
     try:
         # korean-law-mcp는 콜드 기동에 1~2초 걸려서(pdfjs/onnxruntime/sharp 등 무거운 require)
         # 미리 띄워두지 않으면 첫 판례/법령 질문이 라우터 타임아웃에 걸릴 수 있음.
@@ -49,6 +55,7 @@ app.add_middleware(
 
 app.include_router(mcp_router)
 app.include_router(chat_router)
+app.include_router(chat_openai_router)
 
 
 @app.get("/health")

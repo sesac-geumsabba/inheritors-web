@@ -126,7 +126,7 @@ export default function ChatPage() {
     setIsStreaming(true);
 
     try {
-      const res = await fetch(`${API_BASE}/chat/openai`, {
+      const res = await fetch(`${API_BASE}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: query, session_id: sessionIdRef.current }),
@@ -154,7 +154,7 @@ export default function ChatPage() {
     setIsStreaming(true);
 
     try {
-      const res = await fetch(`${API_BASE}/chat/openai/continue`, {
+      const res = await fetch(`${API_BASE}/chat/continue`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message_id: messageId }),

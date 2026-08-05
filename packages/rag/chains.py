@@ -1,10 +1,15 @@
-"""disclaimer + 신탁 자료를 조립해 LLM(Ollama)에 주입하는 RAG 체인. 컨텍스트에 없는 내용은 답하지 않도록 강제."""
+"""disclaimer + 신탁 자료를 조립해 LLM에 주입하는 RAG 체인. 컨텍스트에 없는 내용은 답하지 않도록 강제.
+
+기본 LLM은 Ollama(EEVE-Korean)지만 stream_answer/continue_answer 둘 다 llm 인자로 다른
+ChatModel을 주입받을 수 있다 — packages/rag/openai_chains.py가 이 방식으로 검색/프롬프트
+조립 로직은 그대로 두고 ChatOpenAI로만 바꿔 재사용한다."""
 
 import os
 import re
 from collections.abc import Iterator
 from functools import lru_cache
 
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_ollama import ChatOllama
 from sqlalchemy.orm import Session
@@ -120,26 +125,33 @@ def _build_messages(
     ]
 
 
-def _stream_tokens(messages: list[BaseMessage]) -> Iterator[str]:
-    for chunk in _llm().stream(messages):
+def _stream_tokens(messages: list[BaseMessage], llm: BaseChatModel) -> Iterator[str]:
+    for chunk in llm.stream(messages):
         if chunk.content:
             yield chunk.content
 
 
 def continue_answer(
-    query: str, previous_answer: str, chunks: list[RetrievedChunk], external_sources: list[dict]
+    query: str,
+    previous_answer: str,
+    chunks: list[RetrievedChunk],
+    external_sources: list[dict],
+    llm: BaseChatModel | None = None,
 ) -> Iterator[str]:
     """"더 설명해드릴까요?"에 사용자가 "네"로 답했을 때 이어 쓰는 답변.
 
     검색은 다시 하지 않고 원래 답변에 쓰인 근거(chunks/external_sources)를 그대로 재사용하며,
     이전 답변을 대화 맥락(AIMessage)에 넣어 같은 내용을 반복하지 않고 자연스럽게 이어가게 한다.
+
+    llm을 안 주면 기존 Ollama를 그대로 쓴다 — packages/rag/openai_chains.py가 이 함수를
+    그대로 호출하면서 ChatOpenAI 인스턴스만 넘겨 검색/프롬프트 조립 로직을 재사용한다.
     """
     messages = [
         *_build_messages(query, chunks, external_sources),
         AIMessage(content=previous_answer),
         HumanMessage(content="네, 이어서 설명해주세요."),
     ]
-    return _strip_confidence_score(_stream_tokens(messages))
+    return _strip_confidence_score(_stream_tokens(messages, llm or _llm()))
 
 
 def stream_answer(
@@ -149,6 +161,7 @@ def stream_answer(
     per_category_k: int = PER_CATEGORY_TOP_K,
     external_sources: list[dict] | None = None,
     skip_internal: bool = False,
+    llm: BaseChatModel | None = None,
 ) -> tuple[Iterator[str], list[RetrievedChunk]]:
     """답변 토큰 스트림과, message_sources 기록용으로 실제 인용된 내부 청크 목록을 함께 반환.
 
@@ -165,6 +178,9 @@ def stream_answer(
     skip_internal=True면 내부 문서 검색 자체를 안 함 — 순수 판례 질의는 내부 DB(신탁 상품
     설명서/계약서)에 실제 판례 원문이 없어서, 의미상 비슷해 보이는(예: "유류분" 언급) 상품
     안내 문구가 판례 대신 인용되는 오답 유발 가능 (chat_router에서 판단해 전달).
+
+    llm을 안 주면 기존 Ollama를 그대로 쓴다 — packages/rag/openai_chains.py가 이 함수를
+    그대로 호출하면서 ChatOpenAI 인스턴스만 넘겨 검색/프롬프트 조립 로직을 재사용한다.
     """
     external_sources = external_sources or []
     if skip_internal:
@@ -182,4 +198,4 @@ def stream_answer(
 
     used_chunks = chunks if has_internal else []
     messages = _build_messages(query, used_chunks, external_sources)
-    return _strip_confidence_score(_stream_tokens(messages)), used_chunks
+    return _strip_confidence_score(_stream_tokens(messages, llm or _llm())), used_chunks
