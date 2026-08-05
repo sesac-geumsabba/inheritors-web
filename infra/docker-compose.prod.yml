@@ -1,0 +1,37 @@
+# EC2 배포용. infra/docker-compose.yml(로컬 dev, 소스에서 build)과 달리 CI가 GHCR에
+# 미리 만들어 올린 이미지를 pull만 해서 띄운다 — 사양이 낮은 EC2에서 Next.js/Python을
+# 매번 빌드하면 느리고 t4g.nano급에서는 OOM 위험도 있다.
+#
+# 사용법 (EC2에서):
+#   cd infra
+#   echo "GHCR_OWNER=sesac-geumsabba" >> .env.prod
+#   echo "WEB_TAG=staging" >> .env.prod       # 특정 버전 고정 배포/롤백 시 태그를 바꿔서 재실행
+#   echo "API_TAG=staging" >> .env.prod
+#   docker compose --env-file .env.prod -f docker-compose.prod.yml pull
+#   docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
+#
+# GHCR가 private면 최초 1회 로그인 필요: docker login ghcr.io -u <github-id> -p <PAT: read:packages>
+
+services:
+  web:
+    image: ghcr.io/${GHCR_OWNER}/inheritors-web:${WEB_TAG:-staging}
+    ports:
+      - "3100:3100"
+    env_file:
+      - ../apps/web/.env
+    environment:
+      # 3100으로 맞춘다 — Next.js standalone server.js는 PORT env를 그대로 따른다.
+      - PORT=3100
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  api:
+    image: ghcr.io/${GHCR_OWNER}/inheritors-api:${API_TAG:-staging}
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../apps/api/.env
+    restart: unless-stopped
+    # DB는 컨테이너 없이 Supabase 등 외부 인스턴스를 DATABASE_URL로 연결 (env_file 참고)
+
