@@ -1,381 +1,391 @@
 <!DOCTYPE html>
+
 <html lang="ko">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>늘다 (Neulda) - 1. 온보딩 및 환경 설정</title>
-  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>상속자들 - 온보딩</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+    rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;700&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap"
+    rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+    rel="stylesheet" />
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container-lowest": "#ffffff",
+            "tertiary-fixed-dim": "#d5c1c9",
+            "tertiary-container": "#807077",
+            "surface-container-high": "#eae7e7",
+            "on-error-container": "#93000a",
+            "on-primary-fixed": "#3f001b",
+            "on-primary-fixed-variant": "#8f0045",
+            "on-surface": "#1c1b1b",
+            "background": "#fcf9f8",
+            "outline": "#8e6f76",
+            "secondary-container": "#fe9d00",
+            "primary-container": "#e01572",
+            "surface-variant": "#e5e2e1",
+            "on-secondary-container": "#663c00",
+            "on-secondary": "#ffffff",
+            "primary-fixed": "#ffd9e1",
+            "on-secondary-fixed": "#2c1700",
+            "surface-container": "#f0eded",
+            "on-surface-variant": "#5a3f46",
+            "inverse-surface": "#313030",
+            "on-error": "#ffffff",
+            "surface": "#fcf9f8",
+            "surface-dim": "#dcd9d9",
+            "primary-fixed-dim": "#ffb1c5",
+            "tertiary": "#67585f",
+            "secondary-fixed": "#ffdcbb",
+            "inverse-on-surface": "#f3f0ef",
+            "surface-container-highest": "#e5e2e1",
+            "primary": "#b6005a",
+            "on-tertiary-fixed": "#23181e",
+            "secondary-fixed-dim": "#ffb869",
+            "on-tertiary-fixed-variant": "#514349",
+            "on-secondary-fixed-variant": "#673d00",
+            "secondary": "#885200",
+            "error-container": "#ffdad6",
+            "surface-container-low": "#f6f3f2",
+            "on-background": "#1c1b1b",
+            "surface-bright": "#fcf9f8",
+            "inverse-primary": "#ffb1c5",
+            "on-primary-container": "#fffbff",
+            "outline-variant": "#e2bdc5",
+            "error": "#ba1a1a",
+            "surface-tint": "#ba005c",
+            "on-tertiary": "#ffffff",
+            "tertiary-fixed": "#f2dde5",
+            "on-primary": "#ffffff",
+            "on-tertiary-container": "#fffbff",
+            "brand-pink": "#F52D81",
+            "brand-pink-light": "#FDE8F0"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "stack-gap-lg": "32px",
+            "stack-gap-md": "20px",
+            "base": "8px",
+            "gutter": "16px",
+            "container-padding": "24px",
+            "touch-target-min": "56px"
+          },
+          "fontFamily": {
+            "headline-lg-mobile": ["Be Vietnam Pro"],
+            "headline-md": ["Be Vietnam Pro"],
+            "label-lg": ["Noto Sans KR"],
+            "body-lg": ["Noto Sans KR"],
+            "headline-lg": ["Be Vietnam Pro"],
+            "label-sm": ["Noto Sans KR"],
+            "body-md": ["Noto Sans KR"]
+          },
+          "fontSize": {
+            "headline-lg-mobile": ["28px", { "lineHeight": "38px", "fontWeight": "700" }],
+            "headline-md": ["24px", { "lineHeight": "34px", "fontWeight": "700" }],
+            "label-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "0.02em", "fontWeight": "700" }],
+            "body-lg": ["20px", { "lineHeight": "30px", "fontWeight": "500" }],
+            "headline-lg": ["32px", { "lineHeight": "44px", "fontWeight": "700" }],
+            "label-sm": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+            "body-md": ["18px", { "lineHeight": "28px", "fontWeight": "400" }]
+          }
+        }
+      }
+    }
+  </script>
   <style>
-    :root {
-      --primary: #f85029;
-      --primary-dark: #d14734;
-      --accent-yellow: #ffc700;
-      --accent-blue: #3b91c8;
-      --bg-cream: #f5f5f0;
-      --bg-card: #ffffff;
-      --text-main: #222222;
-      --text-sub: #666666;
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+    /* ScrollExpand Styles */
+    .scroll-expand-container {
+      height: 150vh;
+      /* Create scroll space */
+      position: relative;
+      margin-bottom: 2rem;
     }
 
-    body {
-      background-color: #e5e5e0;
+    .scroll-expand-sticky {
+      position: sticky;
+      top: 0;
+      height: calc(100dvh - 160px);
+      /* Available height minus app bar and bottom action considering safe areas */
       display: flex;
-      justify-content: center;
       align-items: center;
-      min-height: 100vh;
-      color: var(--text-main);
-    }
-
-    /* Mobile Container Wrapper */
-    .app-container {
-      width: 100%;
-      max-width: 430px;
-      height: 900px;
-      max-height: 95vh;
-      background-color: var(--bg-cream);
-      border-radius: 36px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-      display: flex;
-      flex-direction: column;
+      justify-content: center;
       overflow: hidden;
+    }
+
+    .scroll-expand-media-wrapper {
       position: relative;
-    }
-
-    /* Header */
-    .app-header {
-      padding: 20px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: var(--bg-cream);
-      border-bottom: 1px solid rgba(0,0,0,0.05);
-    }
-
-    .brand-logo {
-      font-weight: 800;
-      font-size: 22px;
-      color: var(--primary);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .progress-bar-container {
       width: 100%;
-      height: 6px;
-      background-color: #e0e0d8;
-    }
-    .progress-bar {
       height: 100%;
-      width: 50%;
-      background-color: var(--primary);
-      transition: width 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    /* Main Viewing Area (Top 50%) */
-    .viewing-area {
-      flex: 1;
-      padding: 24px;
+    .scroll-expand-media {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      /* ensure image is contained */
+      will-change: transform, clip-path;
+      transform-origin: center center;
+    }
+
+    .scroll-expand-content {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       display: flex;
       flex-direction: column;
       align-items: center;
-      text-align: center;
       justify-content: center;
-      gap: 16px;
+      pointer-events: none;
+      z-index: 10;
     }
 
-    /* Neulda Character Avatar */
-    .character-box {
-      width: 120px;
-      height: 120px;
-      background-color: var(--primary);
-      border-radius: 50%;
+    .scroll-expand-title {
+      color: white;
+      font-size: 2rem;
+      font-weight: bold;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+      text-align: center;
+      padding: 0 1rem;
+      opacity: 0;
+      transform: translateY(20px);
+      will-change: opacity, transform;
+      transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+    }
+
+    .scroll-hint {
+      position: absolute;
+      bottom: 2rem;
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: center;
-      box-shadow: 0 10px 20px rgba(248, 80, 41, 0.3);
-      position: relative;
-      animation: bounce 2s infinite ease-in-out;
+      color: var(--color-on-surface-variant);
+      animation: bounce 2s infinite;
+      opacity: 1;
+      transition: opacity 0.3s ease;
     }
 
     @keyframes bounce {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-8px); }
-    }
 
-    .character-face {
-      width: 90px;
-      height: 90px;
-      background: white;
-      border-radius: 50%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
+      0%,
+      20%,
+      50%,
+      80%,
+      100% {
+        transform: translateY(0);
+      }
 
-    .character-ring {
-      width: 42px;
-      height: 42px;
-      border: 5px solid var(--primary);
-      border-top-color: transparent;
-      border-radius: 50%;
-      animation: spin 3s linear infinite;
-    }
+      40% {
+        transform: translateY(-10px);
+      }
 
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    .welcome-title {
-      font-size: 26px;
-      font-weight: 800;
-      color: var(--text-main);
-      line-height: 1.3;
-    }
-
-    .welcome-desc {
-      font-size: 16px;
-      color: var(--text-sub);
-      font-weight: 500;
-      line-height: 1.5;
-    }
-
-    /* Step Content Area */
-    .step-card {
-      background: white;
-      width: 100%;
-      border-radius: 20px;
-      padding: 20px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-      text-align: left;
-    }
-
-    .step-title {
-      font-size: 18px;
-      font-weight: 700;
-      margin-bottom: 12px;
-      color: var(--text-main);
-    }
-
-    /* Font Size Slider Demo */
-    .font-size-demo {
-      background-color: var(--bg-cream);
-      padding: 16px;
-      border-radius: 12px;
-      text-align: center;
-      margin-bottom: 16px;
-      font-size: 20px;
-      font-weight: 700;
-      transition: font-size 0.2s ease;
-      min-height: 60px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .slider-wrapper {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .slider-wrapper span {
-      font-weight: 800;
-    }
-
-    input[type="range"] {
-      flex: 1;
-      accent-color: var(--primary);
-      height: 10px;
-    }
-
-    /* Voice Avatar Grid */
-    .voice-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-      margin-top: 12px;
-    }
-
-    .voice-card {
-      background: var(--bg-cream);
-      border: 2px solid transparent;
-      border-radius: 14px;
-      padding: 12px 6px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .voice-card.selected {
-      border-color: var(--primary);
-      background: #fff5f2;
-    }
-
-    .voice-icon {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      margin: 0 auto 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-weight: 700;
-      font-size: 14px;
-    }
-
-    .voice-name {
-      font-size: 13px;
-      font-weight: 700;
-    }
-
-    /* Interaction Area (Bottom 50% / Fixed CTA) */
-    .interaction-area {
-      padding: 20px 24px 28px;
-      background: white;
-      border-top-left-radius: 28px;
-      border-top-right-radius: 28px;
-      box-shadow: 0 -8px 20px rgba(0,0,0,0.05);
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .btn-primary {
-      width: 100%;
-      height: 56px;
-      background-color: var(--primary);
-      color: white;
-      font-size: 18px;
-      font-weight: 700;
-      border: none;
-      border-radius: 16px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 6px 16px rgba(248, 80, 41, 0.3);
-      transition: background-color 0.2s, transform 0.1s;
-      text-decoration: none;
-    }
-
-    .btn-primary:active {
-      transform: scale(0.98);
-      background-color: var(--primary-dark);
-    }
-
-    .nav-links {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 6px;
-    }
-
-    .nav-link-btn {
-      color: var(--text-sub);
-      font-size: 14px;
-      text-decoration: underline;
-      cursor: pointer;
+      60% {
+        transform: translateY(-5px);
+      }
     }
   </style>
 </head>
-<body>
 
-  <div class="app-container">
-    <!-- Header -->
-    <div class="app-header">
-      <div class="brand-logo">
-        <span>🍊</span> 늘다 (Neulda)
+<body class="bg-background min-h-screen flex flex-col items-center justify-center font-body-md text-on-background">
+  <!-- Mobile Container -->
+  <div
+    class="w-full max-w-[480px] bg-surface h-[100dvh] flex flex-col relative overflow-hidden border-x border-outline-variant/30 shadow-2xl z-0"
+    id="mobile-container">
+    <!-- TopAppBar -->
+    <header
+      class="bg-surface flex justify-between items-center w-full px-container-padding h-touch-target-min docked full-width top-0 border-b border-outline-variant flat no shadows z-20 shrink-0">
+      <div class="flex items-center gap-4 w-full">
+        <span class="font-headline-md text-headline-md font-bold text-brand-pink truncate flex-1">상속자들</span>
       </div>
-      <span style="font-size: 14px; font-weight: 600; color: var(--primary);">Step 1/3</span>
-    </div>
-    
-    <div class="progress-bar-container">
-      <div class="progress-bar" id="progressBar"></div>
-    </div>
-
-    <!-- Viewing Area -->
-    <div class="viewing-area">
-      <!-- Character Avatar -->
-      <div class="character-box">
-        <div class="character-face">
-          <div class="character-ring"></div>
-        </div>
-      </div>
-
-      <div>
-        <h1 class="welcome-title">안녕하세요!<br>저는 <span style="color: var(--primary);">'느리'</span>라고 해요</h1>
-        <p class="welcome-desc" style="margin-top: 6px;">디지털 세상이 무섭지 않도록<br>오늘부터 차근차근 함께 배워요!</p>
-      </div>
-
-      <!-- Step Card: Font Size & Voice Setup -->
-      <div class="step-card">
-        <div class="step-title">👀 1. 글자 크기 조절</div>
-        <div class="font-size-demo" id="fontDemo">
-          이 글씨가 잘 보이시나요?
-        </div>
-        <div class="slider-wrapper">
-          <span style="font-size: 14px;">가</span>
-          <input type="range" id="fontSlider" min="16" max="28" value="20" oninput="updateFontSize(this.value)">
-          <span style="font-size: 24px;">가</span>
-        </div>
-      </div>
-
-      <div class="step-card">
-        <div class="step-title">🎙️ 2. 마음에 드는 목소리 선택</div>
-        <div class="voice-grid">
-          <div class="voice-card selected" onclick="selectVoice(this)">
-            <div class="voice-icon" style="background: var(--primary);">오렌지</div>
-            <div class="voice-name">밝음</div>
+    </header>
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col overflow-y-auto z-0 relative scroll-smooth" id="main-scroll-area">
+      <!-- ScrollExpand Component -->
+      <div class="scroll-expand-container" id="scroll-expand-section">
+        <div class="scroll-expand-sticky">
+          <div class="w-full h-full p-4 flex flex-col min-h-0" id="card-frame">
+            <div
+              class="w-full flex-1 bg-brand-pink-light rounded-2xl flex items-center justify-center p-4 sm:p-8 relative overflow-hidden z-1 border border-outline-variant/20 shadow-sm min-h-0"
+              id="media-card">
+              <div class="scroll-expand-media-wrapper bg-white rounded-xl shadow-inner w-full h-full">
+                <img alt="안전하고 편안한 상속 준비" class="scroll-expand-media object-contain p-4" id="scroll-media"
+                  src="https://lh3.googleusercontent.com/aida/AP1WRLvJ6tEPAwMTmzv4We3wgvUD4LXN6t53JCADrSxH21ILNyvtJGmT2nAfbtDbp31i1yPPp-X7vCaXCC35D_dqI78WFQ6AdyJrBBmPZEScDadJ7g2A_sPWersSR0jRXclHAdLSA2LPxjOIWM3Bwd8WUmanFX5ZEJn5zpgoiRzsh4V2VKLNtl_yo0aOItobqmFP-n3dsY6LZj7ua_-w0XV9QO0WhTVAi9xtMYJ_u1IOec-Hya-nS2w8gRQC4rlrVaoIcaP2zwCLos5U" />
+              </div>
+            </div>
           </div>
-          <div class="voice-card" onclick="selectVoice(this)">
-            <div class="voice-icon" style="background: var(--accent-yellow);">토끼</div>
-            <div class="voice-name">친근</div>
+          <div class="scroll-expand-content">
+            <h2 class="scroll-expand-title" id="scroll-title">안전하고 편안한 상속 준비</h2>
           </div>
-          <div class="voice-card" onclick="selectVoice(this)">
-            <div class="voice-icon" style="background: var(--accent-blue);">곰</div>
-            <div class="voice-name">차분</div>
-          </div>
-          <div class="voice-card" onclick="selectVoice(this)">
-            <div class="voice-icon" style="background: #888888;">고양이</div>
-            <div class="voice-name">다정</div>
+          <div class="scroll-hint" id="scroll-hint">
+            <span class="text-sm font-medium mb-1">스크롤해서 확인하기</span>
+            <span class="material-symbols-outlined">keyboard_arrow_down</span>
           </div>
         </div>
       </div>
-    </div>
-
-    <!-- Interaction Area -->
-    <div class="interaction-area">
-      <a href="second-page.html" class="btn-primary">
-        이 설정으로 시작하기 👍
-      </a>
-      <div class="nav-links">
-        <a href="first-page.html" style="font-size: 14px; font-weight: 700; color: var(--primary);">1. 온보딩</a>
-        <a href="second-page.html" style="font-size: 14px; color: var(--text-sub);">2. 메인/수업</a>
-        <a href="third-page.html" style="font-size: 14px; color: var(--text-sub);">3. 챗봇/학습</a>
+      <!-- Welcome Text (Appears after scroll expand) -->
+      <div class="px-container-padding pb-40">
+        <div
+          class="w-full bg-brand-pink-light/50 rounded-2xl p-6 text-center border border-outline-variant/20 shadow-sm flex flex-col items-center justify-center gap-4 z-1">
+          <h1 class="font-headline-md text-headline-md text-on-surface">안녕하세요!</h1>
+          <p class="font-body-lg text-body-lg text-on-surface-variant">
+            안전하고 편안한 상속 준비,<br />
+            <span class="text-brand-pink font-bold">상속자들이 도와드릴게요.</span>
+          </p>
+        </div>
       </div>
+    </main>
+    <!-- Bottom Action Area -->
+    <div
+      class="absolute bottom-0 left-0 w-full px-container-padding pb-[max(env(safe-area-inset-bottom),24px)] pt-4 bg-gradient-to-t from-surface via-surface to-transparent z-10 shrink-0">
+      <button
+        class="w-full min-h-[56px] h-auto py-3 px-4 bg-brand-pink text-white rounded-lg flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all shadow-md font-label-lg text-label-lg group">
+        <span class="text-center break-words">시작하기</span>
+        <span
+          class="material-symbols-outlined group-hover:translate-x-1 transition-transform shrink-0">arrow_forward</span>
+      </button>
     </div>
   </div>
-
   <script>
-    function updateFontSize(val) {
-      document.getElementById('fontDemo').style.fontSize = val + 'px';
-    }
+    document.addEventListener('DOMContentLoaded', () => {
+      const scrollArea = document.getElementById('main-scroll-area');
+      const container = document.getElementById('scroll-expand-section');
+      const mediaCard = document.getElementById('media-card');
+      const media = document.getElementById('scroll-media');
+      const title = document.getElementById('scroll-title');
+      const hint = document.getElementById('scroll-hint');
+      const wrapper = document.querySelector('.scroll-expand-media-wrapper');
+      const cardFrame = document.getElementById('card-frame');
 
-    function selectVoice(element) {
-      const cards = document.querySelectorAll('.voice-card');
-      cards.forEach(card => card.classList.remove('selected'));
-      element.classList.add('selected');
-    }
+      // Initial setup for the card to be centered and not full screen yet
+      const startInset = 32; // px inset for the card initially
+      const startRadius = 16; // px border radius initially
+
+      // Easing function
+      const smoothstep = (min, max, value) => {
+        const x = Math.max(0, Math.min(1, (value - min) / (max - min)));
+        return x * x * (3 - 2 * x);
+      };
+
+      const updateAnimation = () => {
+        if (!scrollArea || !container) return;
+
+        // Calculate scroll progress within the container's area
+        const containerRect = container.getBoundingClientRect();
+        const scrollAreaRect = scrollArea.getBoundingClientRect();
+
+        // Calculate how far the container has scrolled up relative to its starting position
+        // When containerRect.top == scrollAreaRect.top, progress is 0
+        // When containerRect.bottom == scrollAreaRect.bottom (or similar threshold), progress is 1
+
+        const totalScrollDistance = container.offsetHeight - scrollArea.clientHeight;
+
+        // Adjust calculation based on standard scroll event vs position relative to viewport
+        const scrollOffset = scrollArea.scrollTop;
+
+        // Max scroll to complete animation
+        const maxScroll = window.innerHeight * 0.5; // Complete animation after half screen scroll
+
+        let progress = Math.min(1, Math.max(0, scrollOffset / maxScroll));
+        const easedProgress = smoothstep(0, 1, progress);
+
+        // Apply transforms
+        if (easedProgress > 0) {
+          // Expanding phase
+
+          // 1. Remove padding from card frame to expand to edges
+          const currentPadding = 16 * (1 - easedProgress);
+          cardFrame.style.padding = `${currentPadding}px`;
+
+          // 2. Reduce border radius
+          const currentRadius = 16 * (1 - easedProgress);
+          mediaCard.style.borderRadius = `${currentRadius}px`;
+          wrapper.style.borderRadius = `${currentRadius * 0.75}px`;
+
+          // 3. Remove backgrounds and borders as it expands
+          mediaCard.style.backgroundColor = `rgba(253, 232, 240, ${1 - easedProgress})`;
+          mediaCard.style.borderColor = `rgba(226, 189, 197, ${0.2 * (1 - easedProgress)})`;
+          mediaCard.style.padding = `${32 * (1 - easedProgress)}px`;
+
+          // 4. Change object fit and scale image slightly
+          if (easedProgress > 0.8) {
+            media.style.objectFit = 'contain';
+            media.style.padding = '0';
+            media.style.backgroundColor = '#F52D81'; // brand-pink for final background
+          } else {
+            media.style.objectFit = 'contain';
+            media.style.padding = `${16 * (1 - easedProgress)}px`;
+            media.style.backgroundColor = 'transparent';
+          }
+
+          // Scale image for effect
+          const scale = 1 + (easedProgress * 0.1);
+          media.style.transform = `scale(${scale})`;
+
+          // Show title
+          if (easedProgress > 0.5) {
+            const titleProgress = (easedProgress - 0.5) * 2;
+            title.style.opacity = titleProgress;
+            title.style.transform = `translateY(${20 * (1 - titleProgress)}px)`;
+          } else {
+            title.style.opacity = 0;
+          }
+
+          // Hide hint
+          hint.style.opacity = 1 - (easedProgress * 2);
+
+        } else {
+          // Reset to initial state
+          cardFrame.style.padding = '1rem';
+          mediaCard.style.borderRadius = '1rem';
+          mediaCard.style.backgroundColor = 'rgb(253, 232, 240)';
+          mediaCard.style.borderColor = 'rgba(226, 189, 197, 0.2)';
+          mediaCard.style.padding = '2rem';
+
+          wrapper.style.borderRadius = '0.75rem';
+
+          media.style.objectFit = 'contain';
+          media.style.padding = '1rem';
+          media.style.backgroundColor = 'transparent';
+          media.style.transform = 'scale(1)';
+
+          title.style.opacity = 0;
+          hint.style.opacity = 1;
+        }
+      };
+
+      // Listen for scroll events on the main area
+      scrollArea.addEventListener('scroll', () => {
+        requestAnimationFrame(updateAnimation);
+      });
+
+      // Initial call
+      updateAnimation();
+    });
   </script>
 </body>
+
 </html>
