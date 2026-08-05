@@ -8,3 +8,4 @@ class ChatRequest(BaseModel):
 
 class ContinueRequest(BaseModel):
     message_id: int
+    continue_count: int = 0

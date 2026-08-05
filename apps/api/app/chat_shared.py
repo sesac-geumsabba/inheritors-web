@@ -24,6 +24,12 @@ from packages.rag.retriever import RetrievedChunk, to_vector_literal
 PAGE_CHAR_LIMIT = 800
 _SENTENCE_END = (".", "!", "?")
 
+# 이어보기를 몇 번까지 허용할지 상한 — 페이징 판단이 틀려도(has_more 오탐) 무한 반복으로
+# 이어지지 않도록 하는 최종 안전장치. continue_count는 event_stream()이 매 응답마다
+# "지금까지 몇 번 이어졌는지"를 실어 보내고, 프론트는 다음 /continue 요청에 그 값+1을
+# 그대로 돌려준다 — 이 값이 상한에 도달하면 has_more와 무관하게 더 이상 버튼을 띄우지 않는다.
+MAX_CONTINUE_DEPTH = 3
+
 
 def create_session(db: Session) -> int:
     session_id = db.execute(
@@ -228,9 +234,15 @@ def event_stream(
     external_sources: list[dict],
     emit_sources: bool,
     mcp_meta: dict | None = None,
+    continue_count: int = 0,
 ) -> Iterator[str]:
     """토큰을 SSE로 흘려보내다 문장이 끝나는 시점에 budget을 넘기면 생성을 끊고
     "더 설명해드릴까요?"를 붙인 뒤 이어쓰기용 event를 보낸다. /chat, /chat/openai가 공유.
+
+    continue_count는 "이 답변이 몇 번째 이어보기 결과인지"(최초 답변=0). MAX_CONTINUE_DEPTH에
+    도달하면 실제로 더 남은 내용이 있어도(has_more=True) 더 이상 이어보기를 제안하지 않는다 —
+    이어보기가 매번 새 LLM 생성을 다시 시작하는 구조라 자연 종료를 못 만나고 계속 길어질 수
+    있는데(무한 반복 버그의 원인), 이 상한이 그 경우에도 반드시 끝나게 만드는 안전장치다.
     """
     if emit_sources:
         sse_sources = _sse_sources(chunks, external_sources)
@@ -242,7 +254,8 @@ def event_stream(
         yield f"event: mcp_status\ndata: {json.dumps(status, ensure_ascii=False)}\n\n"
 
     parts: list[str] = []
-    paused_early = False
+    hit_pacing_limit = False
+    stream_error = False
     try:
         for token in tokens:
             parts.append(token)
@@ -250,8 +263,8 @@ def event_stream(
             yield "data: " + token.replace("\n", "\ndata: ") + "\n\n"
             shown = "".join(parts)
             if len(shown) >= PAGE_CHAR_LIMIT and shown.rstrip().endswith(_SENTENCE_END):
-                paused_early = True
-                break  # LLM 생성 자체를 여기서 그만 받는다 — 뒤에 남은 긴 인용 블록을 기다리지 않음
+                hit_pacing_limit = True
+                break  # 화면 페이싱을 위해 여기서 일단 멈춘다 — 실제로 더 남았는지는 아래에서 확인
     except Exception as e:
         # LLM 연결 끊김/모델 미존재/API 오류 등으로 스트림 중간에 예외가 나면 그대로 두면
         # 응답이 끝맺음 없이 끊겨 브라우저에 ERR_INCOMPLETE_CHUNKED_ENCODING이 뜬다.
@@ -260,6 +273,23 @@ def event_stream(
         fallback = "죄송합니다, 답변 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
         parts = [fallback]
         yield "data: " + fallback + "\n\n"
+        stream_error = True
+
+    # hit_pacing_limit=True는 "800자 지점에서 우리가 그만 읽었다"는 뜻일 뿐, 그 지점이 답변의
+    # 자연스러운 끝이었을 수도 있다 — 그래서 실제로 뒤에 더 올 토큰이 있는지 한 번 더 당겨서
+    # 확인한다. 이어보기는 이 tokens를 재사용하지 않고 항상 새 LLM 생성을 시작하므로, 여기서
+    # 하나 더 소비해 화면에 못 보여줘도 잃어버리는 내용은 사실상 없다(다음 이어보기가 다시 만듦).
+    has_more = False
+    if hit_pacing_limit and not stream_error:
+        try:
+            next(tokens)
+            has_more = True
+        except StopIteration:
+            has_more = False
+        except Exception:
+            has_more = False
+
+    paused_early = has_more and continue_count < MAX_CONTINUE_DEPTH
 
     if paused_early:
         followup = "\n\n더 설명해드릴까요?"
@@ -274,5 +304,6 @@ def event_stream(
     _save_internal_sources(db, message_id, chunks)
     _save_external_sources(db, message_id, external_sources)
     if paused_early:
-        yield f"event: awaiting_continue\ndata: {{\"message_id\": {message_id}}}\n\n"
+        payload = json.dumps({"message_id": message_id, "continue_count": continue_count})
+        yield f"event: awaiting_continue\ndata: {payload}\n\n"
     yield f"event: done\ndata: {{\"session_id\": {session_id}}}\n\n"

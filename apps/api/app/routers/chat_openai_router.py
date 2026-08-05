@@ -52,5 +52,13 @@ def chat_continue(req: ContinueRequest, db: Session = Depends(get_db)) -> Stream
         db, req.message_id
     )
     tokens = continue_answer(query, previous_answer, chunks, external_sources)
-    stream = event_stream(db, session_id, tokens, chunks, external_sources, emit_sources=False)
+    stream = event_stream(
+        db,
+        session_id,
+        tokens,
+        chunks,
+        external_sources,
+        emit_sources=False,
+        continue_count=req.continue_count,
+    )
     return StreamingResponse(stream, media_type="text/event-stream")
