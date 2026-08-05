@@ -30,23 +30,8 @@ interface ChatMessage {
 const DISCLAIMER =
   "본 내용은 정보 제공을 목적으로 작성되었으며, 정확한 내용 및 적용 여부는 반드시 전문가와 상담하시기 바랍니다.";
 
-const QUICK_ACTIONS = [
-  {
-    label: "주요 판례 쉽게 보기",
-    query: "유언대용신탁과 유류분 반환 청구 관련 대표 판례를 알려주세요.",
-    primary: true,
-  },
-  {
-    label: "실제 방어 성공 사례",
-    query: "시니어 자산가가 자녀 간 상속 분쟁을 예방하기 위해 신탁을 활용한 실생활 사례를 보여주세요.",
-    primary: false,
-  },
-  {
-    label: "신탁 특약 종류 알아보기",
-    query: "유언대용신탁에서 설정할 수 있는 주요 특약 종류에는 무엇이 있나요?",
-    primary: false,
-  },
-];
+const NEURI_AVATAR =
+  "https://lh3.googleusercontent.com/aida-public/AB6AXuCrGft8CohQhylCbrlOxpU4hyhorNkMh8IQq8NxSvNlLSJLJb-CRcCuFoMz4mgRkjxUwcMgHfpqYgiBT3xItUBUYKwglnqpz7heps2jgoW_so6cVh76TQ1zKRWIzKK0outyWnb1eMp_2Ij8ymT8U2TfAOdnMqMu4B29Md7XV4kCL3DyiXQgvqql547UHwBIuf6BYv9CIptAzYZ1WF3GNNL6HEVbyhxBvJX5ZU98fAqkap0KLLB3DwFlohkLPOiCbcpqxvY";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
 
@@ -55,7 +40,8 @@ export default function ChatPage() {
     {
       id: "welcome",
       role: "assistant",
-      content: "안녕하세요. 유언대용신탁에 대해 궁금하신 점을 편하게 물어보세요.",
+      content:
+        "안녕하세요! 상속자들의 법률 도우미 챗봇 '느리'입니다.\n어떤 도움이 필요하신가요? 아래 버튼을 누르시거나 직접 질문을 입력해주세요.",
     },
   ]);
   const [input, setInput] = useState("");
@@ -67,9 +53,14 @@ export default function ChatPage() {
     scrollAnchorRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  function updateMessage(id: string, update: Partial<ChatMessage> | ((m: ChatMessage) => ChatMessage)) {
+  function updateMessage(
+    id: string,
+    update: Partial<ChatMessage> | ((m: ChatMessage) => ChatMessage)
+  ) {
     setMessages((prev) =>
-      prev.map((m) => (m.id !== id ? m : typeof update === "function" ? update(m) : { ...m, ...update }))
+      prev.map((m) =>
+        m.id !== id ? m : typeof update === "function" ? update(m) : { ...m, ...update }
+      )
     );
   }
 
@@ -172,34 +163,36 @@ export default function ChatPage() {
   const lastMessageId = messages[messages.length - 1]?.id;
 
   return (
-    <div className="flex min-h-[max(884px,100dvh)] flex-col">
-      <TopAppBar />
+    <div className="flex h-screen flex-col overflow-hidden bg-surface font-body-md antialiased text-on-surface md:items-center">
+      {/* Mobile Container */}
+      <div className="relative mx-auto flex h-full w-full max-w-[720px] flex-col bg-surface shadow-none md:border md:border-outline-variant md:shadow-lg">
+        <TopAppBar />
 
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col overflow-hidden pb-[84px] pt-16 md:my-8 md:rounded-2xl md:border md:border-outline-variant md:pb-0 md:pt-0 md:shadow-lg">
-        {/* Viewing Area (Top) - Chat History */}
-        <div className="no-scrollbar flex-1 space-y-6 overflow-y-auto bg-background px-margin-mobile py-6">
-          <div className="flex justify-center">
-            <span className="rounded-full bg-surface-container-high px-4 py-1 text-label-lg font-label-lg text-on-surface-variant opacity-80 shadow-sm">
-              법률 상담 시작
-            </span>
-          </div>
-
+        {/* Chat Content Scroll Area */}
+        <main className="relative flex flex-1 flex-col gap-6 overflow-y-auto scroll-smooth bg-surface-container-lowest px-container-padding pt-20 pb-[160px]">
           {messages.map((msg) =>
             msg.role === "user" ? (
-              <div key={msg.id} className="flex justify-end">
-                <div className="max-w-[85%] rounded-2xl rounded-tr-sm border border-outline-variant bg-surface p-5 text-on-surface shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
-                  <p className="text-body-lg font-body-lg text-on-background">{msg.content}</p>
+              <div key={msg.id} className="flex w-full flex-col items-end gap-1 self-end pl-12">
+                <span className="pr-1 text-label-sm font-label-sm text-on-surface-variant">나</span>
+                <div className="w-full max-w-full rounded-2xl rounded-br-sm border border-outline-variant/30 bg-surface-container p-4 text-body-md font-body-md text-on-surface shadow-sm sm:max-w-[85%]">
+                  {msg.content}
                 </div>
               </div>
             ) : (
-              <div key={msg.id} className="flex items-start gap-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-secondary-container text-on-secondary-container shadow-sm">
-                  <span className="material-symbols-outlined icon-fill text-[24px]">favorite</span>
+              <div key={msg.id} className="flex w-full items-start gap-3 sm:max-w-[90%]">
+                <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-outline-variant bg-surface-variant">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={NEURI_AVATAR}
+                    alt="느리"
+                    className="h-full w-full object-cover"
+                  />
                 </div>
-                <div className="flex w-full max-w-[85%] flex-col gap-3">
-                  <div className="rounded-2xl rounded-tl-sm bg-tertiary-fixed p-5 text-on-tertiary-fixed shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
+                <div className="flex flex-1 flex-col gap-1">
+                  <span className="text-label-sm font-label-sm text-on-surface-variant">상속자들</span>
+                  <div className="w-full rounded-2xl rounded-tl-sm border border-outline-variant/30 bg-surface-container-high p-4 text-body-md font-body-md text-on-surface shadow-sm">
                     <p
-                      className={`whitespace-pre-wrap text-body-lg font-body-lg ${
+                      className={`whitespace-pre-wrap ${
                         isStreaming && msg.id === lastMessageId ? "streaming-cursor" : ""
                       }`}
                     >
@@ -212,41 +205,41 @@ export default function ChatPage() {
                       type="button"
                       onClick={() => continueAnswer(msg.id, msg.awaitingContinueId!)}
                       disabled={isStreaming}
-                      className="self-start rounded-full border border-outline-variant bg-surface px-4 py-2 text-label-lg font-label-lg text-secondary shadow-sm transition-all active:scale-[0.98] disabled:opacity-50"
+                      className="mt-2 self-start rounded-full border border-[#f52d81] bg-surface-container-lowest px-4 py-2 text-label-sm font-bold text-[#f52d81] transition-colors hover:bg-surface-variant"
                     >
-                      네, 더 설명해주세요
+                      네, 더 설명해 주세요
                     </button>
                   )}
 
-                  {/* 법률/세무 자문 아님을 고지하는 면책 문구 — 답변 밑에 항상 옅게 노출 */}
                   {msg.id !== "welcome" && msg.content && (!isStreaming || msg.id !== lastMessageId) && (
-                    <p className="px-1 text-label-md font-label-md text-on-surface-variant opacity-60">
+                    <p className="mt-1 px-1 text-label-sm font-label-sm text-on-surface-variant opacity-60">
                       {DISCLAIMER}
                     </p>
                   )}
 
-                  {/* Source Card (RAG Citation) */}
                   {msg.sources && msg.sources.length > 0 && (
-                    <div className="w-full rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
-                      <div className="mb-3 flex items-center gap-2">
-                        <div className="rounded-full bg-surface-container-high p-1.5 text-secondary">
-                          <span className="material-symbols-outlined icon-fill text-[20px]">gavel</span>
-                        </div>
-                        <span className="text-label-lg font-label-lg text-secondary">참고 문서</span>
+                    <div className="mt-2 w-full rounded-xl border border-outline-variant/30 bg-surface p-4 shadow-sm">
+                      <div className="mb-2 flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[20px] text-primary">
+                          gavel
+                        </span>
+                        <span className="text-label-sm font-label-sm font-bold text-primary">
+                          참고 문서
+                        </span>
                       </div>
                       <ul className="space-y-2">
                         {msg.sources.map((s, i) => (
                           <li key={i} className="flex items-start gap-2">
-                            <span className="material-symbols-outlined mt-1 text-[18px] text-outline">
+                            <span className="material-symbols-outlined mt-0.5 text-[18px] text-outline">
                               {SOURCE_ICON[s.source_type]}
                             </span>
-                            <span className="flex-1 text-body-md font-body-md leading-snug text-on-surface-variant">
+                            <span className="flex-1 text-body-md font-body-md text-on-surface-variant">
                               {s.url ? (
                                 <a
                                   href={s.url}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="text-secondary underline underline-offset-2"
+                                  className="text-primary underline underline-offset-2"
                                 >
                                   {s.title}
                                 </a>
@@ -264,67 +257,96 @@ export default function ChatPage() {
               </div>
             )
           )}
-          <div ref={scrollAnchorRef} />
-        </div>
 
-        {/* Interaction Area (Bottom) */}
-        <div className="z-10 w-full border-t border-surface-container-highest bg-background px-margin-mobile pb-6 pt-4 shadow-[0_-8px_24px_rgba(0,0,0,0.02)]">
-          {messages.length <= 1 && (
-            <>
-              <p className="mb-3 px-1 text-label-lg font-label-lg text-on-surface-variant">추천 질문</p>
-              <div className="mb-4 flex flex-col gap-3">
-                {QUICK_ACTIONS.map((action) => (
-                  <button
-                    key={action.label}
-                    type="button"
-                    disabled={isStreaming}
-                    onClick={() => send(action.query)}
-                    className={
-                      action.primary
-                        ? "flex min-h-[56px] w-full items-center justify-between rounded-xl bg-primary px-6 text-body-lg font-body-lg font-bold text-on-primary shadow-[0_4px_12px_rgba(177,37,0,0.2)] transition-all duration-200 hover:bg-primary-container active:scale-[0.98] disabled:opacity-50"
-                        : "flex min-h-[56px] w-full items-center justify-between rounded-xl border border-outline-variant bg-surface px-6 text-body-lg font-body-lg font-bold text-on-surface shadow-sm transition-all duration-200 hover:bg-surface-variant active:scale-[0.98] disabled:opacity-50"
-                    }
-                  >
-                    <span>{action.label}</span>
-                    <span
-                      className={`material-symbols-outlined ${action.primary ? "" : "text-on-surface-variant"}`}
-                    >
-                      arrow_forward_ios
-                    </span>
-                  </button>
-                ))}
+          {/* Typing Indicator */}
+          {isStreaming && messages[messages.length - 1]?.role === "user" && (
+            <div className="flex w-full items-start gap-3 sm:max-w-[90%]">
+              <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-outline-variant bg-surface-variant">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={NEURI_AVATAR} alt="느리" className="h-full w-full object-cover" />
               </div>
-            </>
+              <div className="mt-2 flex w-16 items-center justify-center gap-1 rounded-2xl rounded-tl-sm bg-surface-container p-3">
+                <div className="h-2 w-2 animate-pulse rounded-full bg-on-surface-variant"></div>
+                <div className="h-2 w-2 animate-pulse rounded-full bg-on-surface-variant delay-75"></div>
+                <div className="h-2 w-2 animate-pulse rounded-full bg-on-surface-variant delay-150"></div>
+              </div>
+            </div>
           )}
 
+          {/* Quick Action Pill Buttons */}
+          <div className="mt-2 flex flex-wrap items-center justify-end gap-2 self-end pl-12">
+            <button
+              type="button"
+              disabled={isStreaming}
+              onClick={() => send("유언대용신탁과 유류분 반환 청구 관련 주요 판례를 알려주세요.")}
+              className="min-h-[36px] rounded-full border border-[#f52d81] bg-surface-container-lowest px-4 py-2 text-label-sm font-bold text-[#f52d81] shadow-sm transition-colors hover:bg-surface-variant active:scale-95 disabled:opacity-50"
+            >
+              판례 조회
+            </button>
+            <button
+              type="button"
+              disabled={isStreaming}
+              onClick={() => send("유언대용신탁에서 설정할 수 있는 주요 신탁 내용 및 특약을 검색해주세요.")}
+              className="min-h-[36px] rounded-full border border-[#f52d81] bg-surface-container-lowest px-4 py-2 text-label-sm font-bold text-[#f52d81] shadow-sm transition-colors hover:bg-surface-variant active:scale-95 disabled:opacity-50"
+            >
+              신탁 내용 검색
+            </button>
+            <button
+              type="button"
+              disabled={isStreaming}
+              onClick={() => send("상속 분쟁 예방을 위한 맞춤 상담 신청 절차를 알려주세요.")}
+              className="min-h-[36px] rounded-full border border-[#f52d81] bg-surface-container-lowest px-4 py-2 text-label-sm font-bold text-[#f52d81] shadow-sm transition-colors hover:bg-surface-variant active:scale-95 disabled:opacity-50"
+            >
+              맞춤 상담 신청
+            </button>
+          </div>
+
+          <div ref={scrollAnchorRef} />
+        </main>
+
+        {/* Chat Input Bar */}
+        <div className="fixed bottom-[72px] left-0 z-20 w-full border-t border-outline-variant bg-surface p-gutter md:absolute">
           <form
             onSubmit={(e) => {
               e.preventDefault();
               send(input);
             }}
-            className="flex items-center gap-2"
+            className="mx-auto flex w-full max-w-[720px] items-center gap-3"
           >
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="궁금한 점을 입력하세요"
-              disabled={isStreaming}
-              className="min-h-[52px] flex-1 rounded-xl border border-outline-variant bg-surface px-4 text-body-lg font-body-lg text-on-surface outline-none focus:border-primary disabled:opacity-60"
-            />
+            <button
+              type="button"
+              className="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full border border-outline text-on-surface-variant transition-colors hover:bg-surface-variant sm:h-[52px] sm:w-[52px]"
+            >
+              <span className="material-symbols-outlined text-[24px]">add</span>
+            </button>
+            <div className="relative flex-1">
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    send(input);
+                  }
+                }}
+                placeholder="메시지를 입력하세요..."
+                disabled={isStreaming}
+                rows={1}
+                className="min-h-[44px] max-h-[120px] w-full resize-none overflow-y-auto rounded-3xl border-2 border-outline-variant bg-surface-container-lowest px-4 py-3 text-body-md font-body-md text-on-surface placeholder:text-outline shadow-sm transition-colors focus:border-primary-container focus:ring-0 disabled:opacity-60 sm:min-h-[52px]"
+              />
+            </div>
             <button
               type="submit"
               disabled={isStreaming || !input.trim()}
-              aria-label="전송"
-              className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-xl bg-primary text-on-primary shadow-sm transition-all active:scale-95 disabled:opacity-50"
+              className="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full bg-primary-container text-on-primary-container shadow-sm transition-colors hover:bg-primary active:scale-95 disabled:opacity-50 sm:h-[52px] sm:w-[52px]"
             >
-              <span className="material-symbols-outlined">send</span>
+              <span className="material-symbols-outlined translate-x-0.5 text-[24px]">send</span>
             </button>
           </form>
         </div>
-      </main>
 
-      <BottomNavBar />
+        <BottomNavBar />
+      </div>
     </div>
   );
 }
