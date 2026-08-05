@@ -1,166 +1,172 @@
-# DESIGN.md — "늘다(Neulda)" 스타일 디자인 가이드
-
-> 출처: Behance "늘다" 프로젝트 (시니어를 위한 디지털 리터러시 교육 서비스) 캡처 이미지 분석
-> 목적: Next.js 프로젝트에 적용할 디자인 톤앤매너/컴포넌트 스펙 정리
-
+---
+name: Inheritors Senior Digital Care
+colors:
+  surface: '#fcf9f8'
+  surface-dim: '#dcd9d9'
+  surface-bright: '#fcf9f8'
+  surface-container-lowest: '#ffffff'
+  surface-container-low: '#f6f3f2'
+  surface-container: '#f0eded'
+  surface-container-high: '#eae7e7'
+  surface-container-highest: '#e5e2e1'
+  on-surface: '#1c1b1b'
+  on-surface-variant: '#5a3f46'
+  inverse-surface: '#313030'
+  inverse-on-surface: '#f3f0ef'
+  outline: '#8e6f76'
+  outline-variant: '#e2bdc5'
+  surface-tint: '#ba005c'
+  primary: '#b6005a'
+  on-primary: '#ffffff'
+  primary-container: '#e01572'
+  on-primary-container: '#fffbff'
+  inverse-primary: '#ffb1c5'
+  secondary: '#885200'
+  on-secondary: '#ffffff'
+  secondary-container: '#fe9d00'
+  on-secondary-container: '#663c00'
+  tertiary: '#67585f'
+  on-tertiary: '#ffffff'
+  tertiary-container: '#807077'
+  on-tertiary-container: '#fffbff'
+  error: '#ba1a1a'
+  on-error: '#ffffff'
+  error-container: '#ffdad6'
+  on-error-container: '#93000a'
+  primary-fixed: '#ffd9e1'
+  primary-fixed-dim: '#ffb1c5'
+  on-primary-fixed: '#3f001b'
+  on-primary-fixed-variant: '#8f0045'
+  secondary-fixed: '#ffdcbb'
+  secondary-fixed-dim: '#ffb869'
+  on-secondary-fixed: '#2c1700'
+  on-secondary-fixed-variant: '#673d00'
+  tertiary-fixed: '#f2dde5'
+  tertiary-fixed-dim: '#d5c1c9'
+  on-tertiary-fixed: '#23181e'
+  on-tertiary-fixed-variant: '#514349'
+  background: '#fcf9f8'
+  on-background: '#1c1b1b'
+  surface-variant: '#e5e2e1'
+typography:
+  headline-lg:
+    fontFamily: Be Vietnam Pro
+    fontSize: 32px
+    fontWeight: '700'
+    lineHeight: 44px
+  headline-lg-mobile:
+    fontFamily: Be Vietnam Pro
+    fontSize: 28px
+    fontWeight: '700'
+    lineHeight: 38px
+  headline-md:
+    fontFamily: Be Vietnam Pro
+    fontSize: 24px
+    fontWeight: '700'
+    lineHeight: 34px
+  body-lg:
+    fontFamily: Noto Sans KR
+    fontSize: 20px
+    fontWeight: '500'
+    lineHeight: 30px
+  body-md:
+    fontFamily: Noto Sans KR
+    fontSize: 18px
+    fontWeight: '400'
+    lineHeight: 28px
+  label-lg:
+    fontFamily: Noto Sans KR
+    fontSize: 16px
+    fontWeight: '700'
+    lineHeight: 24px
+    letterSpacing: 0.02em
+  label-sm:
+    fontFamily: Noto Sans KR
+    fontSize: 14px
+    fontWeight: '500'
+    lineHeight: 20px
+rounded:
+  sm: 0.25rem
+  DEFAULT: 0.5rem
+  md: 0.75rem
+  lg: 1rem
+  xl: 1.5rem
+  full: 9999px
+spacing:
+  base: 8px
+  container-padding: 24px
+  gutter: 16px
+  touch-target-min: 56px
+  stack-gap-lg: 32px
+  stack-gap-md: 20px
 ---
 
-## 1. 서비스 컨셉
+## Brand & Style
 
-- **타깃**: 55~65세 시니어, 디지털 기기 사용에 막연한 두려움을 가진 사용자
-- **핵심 가치**: "오늘부터 차근차근" — 챗봇과의 1:1 대화형 학습, 혼자서도 부담 없이 배우는 경험
-- **리서치 인사이트**
-  - 기존 교육은 수강생 수준 차이를 고려하지 않음 → 개인 맞춤 난이도 필요
-  - "능숙하지 않아서"가 아니라 "무서워서" 안 쓰는 심리적 장벽 존재
-  - 나이에 대한 해탈감으로 학습 의지가 낮음 → 동기부여용 캐릭터/톤 필요
-  - 혼자 학습하는 방식 + 오디오(음성) 형식 선호
+The brand identity focuses on reliability, warmth, and accessibility for a senior demographic. It leverages the "Neuri" character mascot to lower the barrier to complex legal and inheritance topics. 
 
----
+The design style is **Corporate Modern with a Soft Edge**, prioritizing clarity and trust. It utilizes high-contrast elements and generous whitespace to ensure legibility. The interface avoids complex gestures or small interactive zones, opting for a physical-first digital metaphor where elements look and feel stable and easy to interact with. The mood is supportive and professional, yet approachable through the vibrant pink accent and friendly mascot illustrations.
 
-## 2. 컬러 팔레트
+## Colors
 
-| 용도 | 컬러명 | HEX |
-|---|---|---|
-| Primary (메인 오렌지) | Orange | `#f85029` |
-| Primary Dark (텍스트/강조용 진한 톤) | Deep Red-Orange | `#d14734` |
-| Secondary | Yellow | `#ffc700` |
-| Secondary | Blue | `#3b91c8` |
-| 배경(라이트) | Off-white / Cream | `#f5f5f0` 근사치 |
-| 배경(카드/섹션 구분) | Light Gray | `#f0f0f0` 근사치 |
+The palette is anchored by a vibrant **Primary Pink (#F52D81)**, used strategically for the main call-to-action buttons, active navigation states, and critical highlights. This color provides the necessary visual weight to guide the user's eye.
 
-- 주요 텍스트·액션 버튼은 **배경 대비 4.5:1 이상** 유지 (WCAG AA 접근성 기준, 시니어 사용자 고려)
-- 주황·노랑·파랑 3색을 활용해 "경쾌한 느낌" 전달 — 과하지 않게 포인트로만 사용
+- **Background:** A clean off-white (#F9F9F9) reduces eye strain compared to pure white while maintaining high contrast with text.
+- **Surface:** Pure white is used for card containers and input fields to create subtle depth.
+- **Secondary/Accent:** The orange from the "Neuri" character is used sparingly for informational icons or secondary status indicators.
+- **Functional:** Success, Warning, and Error colors follow standard patterns but are adjusted for high visibility.
 
----
+## Typography
 
-## 3. 타이포그래피
+Typography is the most critical accessibility tool in this design system. We use **Noto Sans KR** for its exceptional legibility and wide range of weights.
 
-- **서체**: Pretendard (Noto Sans KR 보완 개발 서체)
-- 굵은 weight(Bold~ExtraBold)를 헤드라인에 적극 사용 → 시니어 대상 가독성 강화
-- 본문은 중간 굵기, 줄간격 넉넉하게
+- **Scale:** Font sizes start at a minimum of 18px for body text to ensure readability for users with presbyopia. 
+- **Weight:** Medium and Bold weights are preferred over regular or thin weights to maintain high stroke visibility.
+- **Spacing:** Line heights are set generously (1.5x minimum) to prevent lines of text from blurring together.
+- **Hierarchy:** Use the Primary Pink for specific keywords within body text to highlight important legal terms or actions.
 
-```css
-font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
-```
+## Layout & Spacing
 
----
+The layout follows a **Fluid Grid** model with strict margin requirements to prevent content from touching the screen edges.
 
-## 4. 캐릭터 디자인 — "느리"
+- **Safe Zones:** A 24px side margin is mandatory on all mobile screens.
+- **Touch Targets:** Every interactive element (buttons, toggles, links) must have a minimum touch target height of 56px.
+- **Vertical Rhythm:** A large 32px gap is used between major sections to clearly separate concepts.
+- **Consistency:** All spacing is based on an 8px scale.
+- **Desktop/Tablet:** On larger screens, content is centered within a 720px max-width container to prevent long line lengths that are difficult for seniors to scan.
 
-- 컴�터/휴대폰 **로딩 아이콘**에서 착안한 원형 캐릭터
-- 기본 형태: 오렌지색 후드를 쓴 흰색 원형 얼굴, 중앙에 오렌지 링(로딩 스피너 모티프) 눈코입
-- **감정 상태별 표정 변화** (실시간 인터랙션):
-  - 좋아요/하트: 하트 눈 + 하트 말풍선
-  - 보통/긍정: 점 눈 + 엄지척 말풍선
-  - 슬픔: 점 눈 + 눈물 방울 + 손글씨 말풍선
-- **색상 베리에이션**: 오렌지(기본), 옐로우(토끼 귀), 블루(곰), 그레이(고양이 귀) — 4종 캐릭터로 목소리 선택 UI에 활용
-- 캐릭터는 챗봇 아바타로 화면 하단 고정 위치에 상시 노출
+## Elevation & Depth
 
----
+This design system uses **Tonal Layering** combined with **Low-Contrast Outlines** rather than heavy shadows, which can sometimes appear "blurry" or "dirty" to older eyes.
 
-## 5. 레이아웃 구조 (Design Structure)
+- **Z-0:** Background (#F9F9F9).
+- **Z-1:** Cards and Containers. These use a 1px solid border (#E0E0E0) to define their boundaries clearly against the background.
+- **Z-2:** Floating elements or active modals. These use a soft, large-radius ambient shadow with 5% opacity to indicate they are "above" the current context.
+- **Interaction:** Buttons use a subtle inner-glow or darker border on press to provide immediate physical feedback.
 
-### 5.1 One UI 기반 화면 분할
-- 상단 50%: **Viewing 영역** (콘텐츠 확인)
-- 하단 50%: **Interaction 영역** (버튼, 입력 등 조작)
-- → 삼성 One UI 컨벤션을 따라 시니어에게 익숙한 조작 위치 유지
+## Shapes
 
-### 5.2 Thumb Zone (엄지 도달 범위) 최적화
-- 화면을 `Natural`(자연스러운 도달) / `Stretch`(뻗어야 닿음) / `Ow`(닿기 어려움) 3개 존으로 구분
-- 주요 액션 버튼(전송, 선택, 하단 네비게이션)은 **Natural 존**에 배치
-- 한 손 조작을 기준으로 항상 비슷한 위치에서 핵심 동작 수행 가능하도록 설계
+The shape language is **Rounded**, conveying friendliness and safety. 
 
-### 5.3 하단 고정 네비게이션 (4탭)
-```
-[오늘의 수업]  [복습]  [질문]  [나의 정보]
-```
-- 아이콘 + 라벨 텍스트 병기 (아이콘만 쓰지 않음 — 시니어 접근성)
-- 캐릭터 아바타가 우측 하단 원형 버튼으로 상시 노출 (탭하면 챗봇 호출)
+- **Standard Elements:** Buttons and input fields use a 0.5rem (8px) radius.
+- **Large Containers:** Cards and image containers (like the mascot frame) use a 1rem (16px) radius.
+- **Special Elements:** Chat bubbles for the user use a "Pill" style on three corners with a sharper corner on the right to indicate direction.
 
----
+## Components
 
-## 6. 핵심 화면 & 인터랙션 패턴
+### Buttons
+Primary buttons use the #F52D81 background with white text. They must always include a right-pointing arrow icon to signal "progress." Secondary buttons use a white background with a 2px pink border.
 
-### 6.1 온보딩
-1. 인트로: "오늘부터 차근차근" + 캐릭터 소개 + CTA 버튼("한번 눌러 볼까요?")
-2. 캐릭터 자기소개: "저는 느리라고 해요" + 프로그레스 바
-3. **글자 크기 조절**: 슬라이더(가~가) 드래그 → "이 정도면 잘 보여요" 확인 버튼
-4. **목소리 선택**: 4가지 캐릭터(오렌지/옐로우/블루/그레이) 카드 그리드에서 선택 → "이 목소리가 마음에 들어요"
+### Input Fields
+Inputs must have a thick 2px border when focused. Placeholder text should be high-contrast (at least 4.5:1 ratio) to ensure users can read instructions before typing.
 
-### 6.2 챗봇 대화형 UI
-- 카카오톡 스타일 말풍선 채팅 인터페이스
-- 시스템 메시지: 좌측 흰색 말풍선 (캐릭터 발화)
-- 사용자 선택: 우측 오렌지색 말풍선 (버튼 클릭 시 즉시 대화형으로 전환)
-- **버튼형 응답**: 자유 텍스트 입력 대신 선택형 버튼("네 좋아요!" / "아니오") 제공 → 오타·입력 부담 제거
-- 하단 툴바: 북마크(담아두기), 캐릭터 아바타(대화), 듣기 모드(이어폰 아이콘) 3버튼
-- **담아두기 기능**: 기억하고 싶은 답변을 책갈피 아이콘으로 표시 → 색이 채워지며 피드백
-- **듣기 모드**: 텍스트 대신 음성으로만 학습 가능 (오디오 선호 리서치 반영)
+### Cards
+Cards are the primary container for information. They feature a light pink (#FDE8F0) background when they contain the "Neuri" mascot or helpful tips to distinguish them from standard neutral content.
 
-### 6.3 개인화 설문 (사전 진단)
-- 카드형 단일 선택 리스트 (라디오 형태, 체크 아이콘)
-- 질문 예시: "오늘의 기분은 어떤가요?" / "오늘은 뭐가 제일 먹고 싶나요?" / "평소에 어떤 게 가장 어려웠나요?"
-- 선택 시 빨간 테두리 + 체크 아이콘 강조
-- 하단 "선택할래요" CTA 버튼(오렌지, full-width)
-- 설문 결과 기반으로 "오늘은 이 수업 어때요?" 추천 카드 노출 (썸네일 이미지 + 태그 + 제목 + 난이도/소요시간)
+### Chat Interface
+- **Bot/Neuri Bubble:** Light grey or soft pink background, left-aligned with the mascot avatar.
+- **User Bubble:** Solid Primary Pink background with white text, right-aligned.
+- **Text Controls:** Include "Text Size Up" and "Text Size Down" buttons at the top of long legal documents or chat flows.
 
-### 6.4 학습 콘텐츠 카드
-```
-[태그 배지: 사진/키오스크 등] 
-[썸네일 이미지]
-제목 (예: "폰으로 멋진 사진을 찍어 볼까요?")
-난이도 · 소요시간 (예: "비교적 쉬워요 · 5분 걸려요")
-```
-
-### 6.5 퀴즈/용어 학습 카드
-- 챗봇 대화 중 핵심 용어 설명 시 **인라인 카드** 삽입
-- 카드 구성: 영단어(대문자, 큰 사이즈) + 한글 발음 표기 + 뜻 풀이 텍스트
-- 예: `TAKE OUT` / `테이크 아웃` / "포장해서 가져가겠다는 뜻이에요"
-- 정답/오답 피드백은 짧은 확인 메시지("정답이에요!")로 즉시 제공
-
----
-
-## 7. 접근성 & UX 원칙 (시니어 특화)
-
-1. **큰 터치 타겟**: 버튼 최소 높이 48px 이상, 리스트 아이템 간격 넉넉히
-2. **선택형 우선**: 자유 입력보다 버튼/리스트 선택 방식 우선 사용
-3. **텍스트 크기 커스터마이징**: 사용자가 직접 조절 가능한 슬라이더 제공
-4. **음성 지원**: 듣기 모드로 텍스트 대체 가능
-5. **점진적 노출**: 한 화면에 한 가지 질문/액션만 배치 (인지 부하 최소화)
-6. **감정적 피드백**: 캐릭터 표정 변화로 정서적 지지 전달 (딱딱한 UI 지양)
-7. **일관된 위치**: 주요 액션 버튼 위치를 화면마다 동일하게 유지 (학습 곡선 최소화)
-
----
-
-## 8. Next.js 구현 시 참고 컴포넌트 목록
-
-- `<Header />` — 로고 + 서비스명
-- `<CharacterAvatar state="normal|happy|sad" />` — 감정 상태별 SVG/이미지 스위칭
-- `<ChatBubble sender="bot|user" />`
-- `<ChatOptionButton />` — 선택형 응답 버튼
-- `<SurveyCard selected={bool} />` — 라디오형 카드
-- `<LessonCard thumbnail tag title difficulty duration />`
-- `<VocabCard word korean description />`
-- `<FontSizeSlider />`
-- `<VoiceSelectGrid />`
-- `<BottomNav tabs={['오늘의 수업','복습','질문','나의 정보']} />`
-- `<BookmarkToggle />`
-
----
-
-## 9. Tailwind 기준 색상 토큰 제안
-
-```js
-// tailwind.config.js
-colors: {
-  primary: '#f85029',
-  'primary-dark': '#d14734',
-  accent: {
-    yellow: '#ffc700',
-    blue: '#3b91c8',
-  },
-  background: {
-    cream: '#f5f5f0',
-    gray: '#f0f0f0',
-  }
-}
-```
+### Chips & Tags
+Used for quick-reply suggestions in the chatbot. These should be large, easy to tap, and use the Secondary Orange or Primary Pink for the border to indicate they are interactive.
