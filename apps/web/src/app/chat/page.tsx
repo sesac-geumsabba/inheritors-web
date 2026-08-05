@@ -24,7 +24,11 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   sources?: ChatSource[];
+  awaitingContinueId?: number;
 }
+
+const DISCLAIMER =
+  "본 내용은 정보 제공을 목적으로 작성되었으며, 정확한 내용 및 적용 여부는 반드시 전문가와 상담하시기 바랍니다.";
 
 const QUICK_ACTIONS = [
   {
@@ -63,6 +67,52 @@ export default function ChatPage() {
     scrollAnchorRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  function updateMessage(id: string, update: Partial<ChatMessage> | ((m: ChatMessage) => ChatMessage)) {
+    setMessages((prev) =>
+      prev.map((m) => (m.id !== id ? m : typeof update === "function" ? update(m) : { ...m, ...update }))
+    );
+  }
+
+  async function consumeStream(res: Response, botMsgId: string) {
+    if (!res.ok || !res.body) throw new Error(`요청 실패 (${res.status})`);
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      let sep;
+      while ((sep = buffer.indexOf("\n\n")) !== -1) {
+        const block = buffer.slice(0, sep);
+        buffer = buffer.slice(sep + 2);
+
+        let eventType = "message";
+        const dataLines: string[] = [];
+        for (const line of block.split("\n")) {
+          if (line.startsWith("event: ")) eventType = line.slice(7);
+          else if (line.startsWith("data: ")) dataLines.push(line.slice(6));
+        }
+        const data = dataLines.join("\n");
+        if (!data && eventType === "message") continue;
+
+        if (eventType === "sources") {
+          updateMessage(botMsgId, { sources: JSON.parse(data) as ChatSource[] });
+        } else if (eventType === "awaiting_continue") {
+          const t = JSON.parse(data) as { message_id: number };
+          updateMessage(botMsgId, { awaitingContinueId: t.message_id });
+        } else if (eventType === "done") {
+          sessionIdRef.current = (JSON.parse(data) as { session_id: number }).session_id;
+        } else {
+          updateMessage(botMsgId, (m) => ({ ...m, content: m.content + data }));
+        }
+      }
+    }
+  }
+
   async function send(query: string) {
     if (!query.trim() || isStreaming) return;
 
@@ -75,56 +125,43 @@ export default function ChatPage() {
     setInput("");
     setIsStreaming(true);
 
-    const setBotMessage = (update: Partial<ChatMessage> | ((m: ChatMessage) => ChatMessage)) => {
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id !== botMsgId ? m : typeof update === "function" ? update(m) : { ...m, ...update }
-        )
-      );
-    };
-
     try {
       const res = await fetch(`${API_BASE}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: query, session_id: sessionIdRef.current }),
       });
-      if (!res.ok || !res.body) throw new Error(`요청 실패 (${res.status})`);
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder("utf-8");
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        let sep;
-        while ((sep = buffer.indexOf("\n\n")) !== -1) {
-          const block = buffer.slice(0, sep);
-          buffer = buffer.slice(sep + 2);
-
-          let eventType = "message";
-          const dataLines: string[] = [];
-          for (const line of block.split("\n")) {
-            if (line.startsWith("event: ")) eventType = line.slice(7);
-            else if (line.startsWith("data: ")) dataLines.push(line.slice(6));
-          }
-          const data = dataLines.join("\n");
-          if (!data && eventType === "message") continue;
-
-          if (eventType === "sources") {
-            setBotMessage({ sources: JSON.parse(data) as ChatSource[] });
-          } else if (eventType === "done") {
-            sessionIdRef.current = (JSON.parse(data) as { session_id: number }).session_id;
-          } else {
-            setBotMessage((m) => ({ ...m, content: m.content + data }));
-          }
-        }
-      }
+      await consumeStream(res, botMsgId);
     } catch {
-      setBotMessage({
+      updateMessage(botMsgId, {
+        content: "죄송합니다, 서버 연결에 문제가 발생했습니다. API 서버가 켜져 있는지 확인해 주세요.",
+      });
+    } finally {
+      setIsStreaming(false);
+    }
+  }
+
+  async function continueAnswer(sourceMsgId: string, messageId: number) {
+    if (isStreaming) return;
+    updateMessage(sourceMsgId, { awaitingContinueId: undefined });
+
+    const botMsgId = `a-${Date.now()}`;
+    setMessages((prev) => [
+      ...prev,
+      { id: `u-${Date.now()}`, role: "user", content: "네" },
+      { id: botMsgId, role: "assistant", content: "" },
+    ]);
+    setIsStreaming(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/chat/continue`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message_id: messageId }),
+      });
+      await consumeStream(res, botMsgId);
+    } catch {
+      updateMessage(botMsgId, {
         content: "죄송합니다, 서버 연결에 문제가 발생했습니다. API 서버가 켜져 있는지 확인해 주세요.",
       });
     } finally {
@@ -169,6 +206,24 @@ export default function ChatPage() {
                       {msg.content || (isStreaming ? "생각하는 중..." : "")}
                     </p>
                   </div>
+
+                  {msg.awaitingContinueId !== undefined && (
+                    <button
+                      type="button"
+                      onClick={() => continueAnswer(msg.id, msg.awaitingContinueId!)}
+                      disabled={isStreaming}
+                      className="self-start rounded-full border border-outline-variant bg-surface px-4 py-2 text-label-lg font-label-lg text-secondary shadow-sm transition-all active:scale-[0.98] disabled:opacity-50"
+                    >
+                      네, 더 설명해주세요
+                    </button>
+                  )}
+
+                  {/* 법률/세무 자문 아님을 고지하는 면책 문구 — 답변 밑에 항상 옅게 노출 */}
+                  {msg.id !== "welcome" && msg.content && (!isStreaming || msg.id !== lastMessageId) && (
+                    <p className="px-1 text-label-md font-label-md text-on-surface-variant opacity-60">
+                      {DISCLAIMER}
+                    </p>
+                  )}
 
                   {/* Source Card (RAG Citation) */}
                   {msg.sources && msg.sources.length > 0 && (

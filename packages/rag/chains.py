@@ -5,7 +5,7 @@ import re
 from collections.abc import Iterator
 from functools import lru_cache
 
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_ollama import ChatOllama
 from sqlalchemy.orm import Session
 
@@ -29,7 +29,8 @@ NO_CONTEXT_MESSAGE = (
 SYSTEM_PROMPT = """당신은 유언대용신탁 상담 챗봇입니다.
 아래 [문서]와 [법령/판례]에 있는 내용만 근거로 답변하세요. 거기 없는 내용은 추측하거나 지어내지 말고 모른다고 답하세요.
 답변 마지막에 "신뢰도: 90%" 같은 confidence score를 절대 붙이지 마세요. 그런 수치는 근거가 없습니다.
-답변은 본 서비스가 법률/세무 자문이 아닌 정보 제공 목적임을 자연스럽게 밝히고, 참고한 문서명/법령명/사건번호를 함께 표시하세요."""
+답변은 본 서비스가 법률/세무 자문이 아닌 정보 제공 목적임을 자연스럽게 밝히고, 참고한 문서명/법령명/사건번호를 함께 표시하세요.
+인사말이나 위 지침을 스스로 읊는 것으로 답변을 시작하지 말고, 질문을 [질문]처럼 그대로 반복하지도 말고, 바로 답변 내용부터 시작하세요."""
 
 
 @lru_cache(maxsize=1)
@@ -101,6 +102,42 @@ def _build_external_context(sources: list[dict]) -> str:
     )
 
 
+def _build_messages(
+    query: str, chunks: list[RetrievedChunk], external_sources: list[dict]
+) -> list[SystemMessage | HumanMessage]:
+    context_parts = []
+    if chunks:
+        context_parts.append("[문서]\n" + _build_context(chunks))
+    if external_sources:
+        context_parts.append("[법령/판례]\n" + _build_external_context(external_sources))
+    return [
+        SystemMessage(content=f"{SYSTEM_PROMPT}\n\n{chr(10).join(context_parts)}"),
+        HumanMessage(content=query),
+    ]
+
+
+def _stream_tokens(messages: list[BaseMessage]) -> Iterator[str]:
+    for chunk in _llm().stream(messages):
+        if chunk.content:
+            yield chunk.content
+
+
+def continue_answer(
+    query: str, previous_answer: str, chunks: list[RetrievedChunk], external_sources: list[dict]
+) -> Iterator[str]:
+    """"더 설명해드릴까요?"에 사용자가 "네"로 답했을 때 이어 쓰는 답변.
+
+    검색은 다시 하지 않고 원래 답변에 쓰인 근거(chunks/external_sources)를 그대로 재사용하며,
+    이전 답변을 대화 맥락(AIMessage)에 넣어 같은 내용을 반복하지 않고 자연스럽게 이어가게 한다.
+    """
+    messages = [
+        *_build_messages(query, chunks, external_sources),
+        AIMessage(content=previous_answer),
+        HumanMessage(content="네, 이어서 설명해주세요."),
+    ]
+    return _strip_confidence_score(_stream_tokens(messages))
+
+
 def stream_answer(
     db: Session,
     query: str,
@@ -139,20 +176,6 @@ def stream_answer(
     if not has_internal and not external_sources:
         return iter([NO_CONTEXT_MESSAGE]), []
 
-    context_parts = []
-    if has_internal:
-        context_parts.append("[문서]\n" + _build_context(chunks))
-    if external_sources:
-        context_parts.append("[법령/판례]\n" + _build_external_context(external_sources))
-
-    messages = [
-        SystemMessage(content=f"{SYSTEM_PROMPT}\n\n{chr(10).join(context_parts)}"),
-        HumanMessage(content=query),
-    ]
-
-    def _tokens() -> Iterator[str]:
-        for chunk in _llm().stream(messages):
-            if chunk.content:
-                yield chunk.content
-
-    return _strip_confidence_score(_tokens()), (chunks if has_internal else [])
+    used_chunks = chunks if has_internal else []
+    messages = _build_messages(query, used_chunks, external_sources)
+    return _strip_confidence_score(_stream_tokens(messages)), used_chunks
