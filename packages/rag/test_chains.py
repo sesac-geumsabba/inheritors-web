@@ -1,11 +1,20 @@
-"""_strip_confidence_score 스모크 테스트. DB/LLM 불필요: python packages/rag/test_chains.py"""
+"""chains.py 스모크 테스트: python packages/rag/test_chains.py
+_strip_confidence_score는 DB/LLM 불필요. skip_internal 테스트만 DB 필요(LLM 호출은 없음 —
+no-context 경로라 Ollama까지는 안 탐)."""
 
+import os
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from dotenv import load_dotenv
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
-from packages.rag.chains import _strip_confidence_score
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+load_dotenv(Path(__file__).resolve().parents[2] / "apps" / "api" / ".env")
+
+from packages.rag.chains import NO_CONTEXT_MESSAGE, _strip_confidence_score, stream_answer
+from packages.rag.embeddings import embed_query
 
 
 def joined(tokens: list[str]) -> str:
@@ -32,5 +41,23 @@ def main() -> None:
     print("[PASS] confidence score strip (leading + trailing)")
 
 
+def test_skip_internal() -> None:
+    """skip_internal=True면 내부 문서가 실제로 관련 있어도 무시하고, 외부 소스도 없으면
+    NO_CONTEXT_MESSAGE로 빠져야 함 (판례 질의가 신탁 상품설명서를 오답 근거로 안 쓰는지 확인)."""
+    engine = create_engine(os.environ["DATABASE_URL"])
+    db = sessionmaker(bind=engine)()
+
+    # "신탁" 관련 질의라 내부 DB엔 top-1 스코어 0.6대 청크가 실제로 있음 (test_retriever.py 참고)
+    embedding = embed_query("신탁 가입하면 수수료는 어떻게 되나요?")
+    tokens, chunks = stream_answer(db, "신탁 판례를 알려주세요", embedding, skip_internal=True)
+    db.close()
+
+    assert chunks == [], f"skip_internal인데 내부 청크가 반환됨: {chunks}"
+    answer = "".join(tokens)
+    assert answer == NO_CONTEXT_MESSAGE, f"외부 소스 없이 skip_internal이면 no-context여야 함: {answer!r}"
+    print("[PASS] skip_internal bypasses internal search")
+
+
 if __name__ == "__main__":
     main()
+    test_skip_internal()
