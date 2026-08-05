@@ -12,7 +12,12 @@ function readSavedScale(): FontScale {
   return (LEVELS as readonly number[]).includes(saved) ? (saved as FontScale) : 1;
 }
 
-const FontScaleContext = createContext<{ scale: FontScale; cycle: () => void } | null>(null);
+const FontScaleContext = createContext<{
+  scale: FontScale;
+  cycle: () => void;
+  increase: () => void;
+  decrease: () => void;
+} | null>(null);
 
 export function useFontScale() {
   const ctx = useContext(FontScaleContext);
@@ -46,8 +51,20 @@ export default function FontScaleProvider({ children }: { children: ReactNode })
     setScale(LEVELS[(i + 1) % LEVELS.length]);
   }
 
+  // 디자인이 "+글자 크게"/"-글자 작게" 두 버튼으로 바뀌어서 순환(cycle) 대신 단계별
+  // 증감을 추가 — cycle은 다른 화면에서 계속 쓸 수 있어 남겨둔다.
+  function increase() {
+    const i = LEVELS.indexOf(scale);
+    setScale(LEVELS[Math.min(i + 1, LEVELS.length - 1)]);
+  }
+
+  function decrease() {
+    const i = LEVELS.indexOf(scale);
+    setScale(LEVELS[Math.max(i - 1, 0)]);
+  }
+
   return (
-    <FontScaleContext.Provider value={{ scale: mounted ? scale : 1, cycle }}>
+    <FontScaleContext.Provider value={{ scale: mounted ? scale : 1, cycle, increase, decrease }}>
       {children}
     </FontScaleContext.Provider>
   );
