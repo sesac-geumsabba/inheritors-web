@@ -1,9 +1,12 @@
 "use client";
 
+import { useFontScale } from "./FontScaleProvider";
 import { useOnboardingTrigger } from "./OnboardingModal";
 
 export default function TopAppBar() {
   const openOnboarding = useOnboardingTrigger();
+  const { scale, cycle } = useFontScale();
+  const percent = Math.round(scale * 100);
 
   return (
     <header className="fixed left-0 top-0 z-50 flex h-16 w-full items-center justify-between gap-2 border-b border-outline-variant bg-surface px-margin-mobile shadow-sm">
@@ -25,10 +28,11 @@ export default function TopAppBar() {
         </button>
         <button
           type="button"
-          aria-label="글자 크기 조절, 현재 150%"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-container-high text-label-lg font-label-lg text-on-surface-variant transition-colors hover:bg-surface-variant active:scale-95"
+          onClick={cycle}
+          aria-label={`글자 크기 조절, 현재 ${percent}%. 탭하면 다음 크기로 변경`}
+          className="flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full bg-surface-container-high px-2 text-label-lg font-label-lg text-on-surface-variant transition-colors hover:bg-surface-variant active:scale-95"
         >
-          A+
+          가{percent > 100 && "+"}
         </button>
       </div>
     </header>
