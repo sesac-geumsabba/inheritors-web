@@ -18,19 +18,24 @@ services:
       - "8000:8000"
     env_file:
       - ../apps/api/.env
+    environment:
+      # .env의 OLLAMA_BASE_URL(로컬 개발용 localhost)을 컨테이너 네트워크용으로 덮어씀 —
+      # api 컨테이너 안에서 localhost는 자기 자신이라 옆 컨테이너인 ollama를 못 찾는다.
+      - OLLAMA_BASE_URL=http://ollama:11434
     depends_on:
       - ollama
     # DB는 단일 인스턴스(Supabase 등)를 DATABASE_URL로 연결
     # 법원/법제처 API 키도 이 env_file에서 관리
 
   ollama:
-    image: ollama/ollama:latest
+    # 답변 생성 모델(EEVE-Korean 10.8B Q4, ~6.5GB)이 이미지에 미리 구워져 있어(infra/ollama/Dockerfile,
+    # Docker Hub: popopododo/inheritors-ollama) pull만 하면 바로 뜬다 — 컴퓨터마다 모델을 새로
+    # 받을 필요 없음. 다른 모델로 바꾸려면 infra/ollama/Dockerfile을 다시 빌드해 push.
+    image: popopododo/inheritors-ollama:latest
     ports:
       - "11434:11434"
     volumes:
       - ollama_models:/root/.ollama
-    # 최초 기동 후 1회: docker compose exec ollama ollama pull hf.co/gchrisoh/EEVE-Korean-Instruct-10.8B-v1.0-Q4_K_M-GGUF
-    # (heegyu 리포는 구버전 GGUF라 Ollama가 "not compatible with llama.cpp"로 거부함 — gguf-my-repo로 재양자화된 리포 사용)
 
 volumes:
   ollama_models:
