@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>늘다 (Neulda) - 2. 오늘의 수업 메인 & 진단 추천</title>
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <style>
+    :root {
+      --primary: #f85029;
+      --primary-dark: #d14734;
+      --accent-yellow: #ffc700;
+      --accent-blue: #3b91c8;
+      --bg-cream: #f5f5f0;
+      --bg-card: #ffffff;
+      --text-main: #222222;
+      --text-sub: #666666;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+    }
+
+    body {
+      background-color: #e5e5e0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      color: var(--text-main);
+    }
+
+    /* Mobile Container Wrapper */
+    .app-container {
+      width: 100%;
+      max-width: 430px;
+      height: 900px;
+      max-height: 95vh;
+      background-color: var(--bg-cream);
+      border-radius: 36px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Header */
+    .app-header {
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: white;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+    }
+
+    .brand-logo {
+      font-weight: 800;
+      font-size: 22px;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .header-user {
+      font-size: 14px;
+      font-weight: 600;
+      background: #fff5f2;
+      color: var(--primary);
+      padding: 6px 12px;
+      border-radius: 20px;
+    }
+
+    /* Scrollable Content Area */
+    .main-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Banner / Hero Section */
+    .hero-banner {
+      background: linear-gradient(135deg, #f85029 0%, #ff8364 100%);
+      border-radius: 24px;
+      padding: 24px;
+      color: white;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 10px 20px rgba(248, 80, 41, 0.25);
+    }
+
+    .hero-title {
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1.3;
+      margin-bottom: 8px;
+    }
+
+    .hero-sub {
+      font-size: 15px;
+      opacity: 0.9;
+      margin-bottom: 16px;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.25);
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    /* Diagnostic Survey Section */
+    .section-box {
+      background: white;
+      border-radius: 24px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Survey Card Options */
+    .survey-option {
+      background: var(--bg-cream);
+      border: 2px solid transparent;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 700;
+      font-size: 16px;
+      transition: all 0.2s ease;
+    }
+
+    .survey-option.selected {
+      border-color: var(--primary);
+      background: #fff5f2;
+      color: var(--primary-dark);
+    }
+
+    .survey-option .check-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #ddd;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 13px;
+    }
+
+    .survey-option.selected .check-icon {
+      background: var(--primary);
+    }
+
+    /* CTA Button inside survey */
+    .btn-survey-submit {
+      width: 100%;
+      height: 52px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 14px;
+      font-weight: 700;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 6px;
+      box-shadow: 0 4px 12px rgba(248, 80, 41, 0.3);
+    }
+
+    /* Lesson Recommended Card */
+    .lesson-card {
+      background: white;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+      display: flex;
+      flex-direction: column;
+      border: 1px solid rgba(0,0,0,0.04);
+      margin-bottom: 12px;
+    }
+
+    .lesson-thumb {
+      height: 120px;
+      background: linear-gradient(135deg, #3b91c8 0%, #68b3e3 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 40px;
+      position: relative;
+    }
+
+    .lesson-tag {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: rgba(0,0,0,0.6);
+      color: white;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 10px;
+    }
+
+    .lesson-info {
+      padding: 16px;
+    }
+
+    .lesson-title {
+      font-size: 17px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .lesson-meta {
+      font-size: 14px;
+      color: var(--text-sub);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Bottom Floating Character Avatar */
+    .floating-avatar {
+      position: absolute;
+      bottom: 80px;
+      right: 20px;
+      width: 64px;
+      height: 64px;
+      background: var(--primary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 20px rgba(248, 80, 41, 0.4);
+      cursor: pointer;
+      z-index: 10;
+      text-decoration: none;
+    }
+    .avatar-inner {
+      width: 48px;
+      height: 48px;
+      background: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+
+    /* Bottom Fixed Navigation (4 Tabs) */
+    .bottom-nav {
+      height: 72px;
+      background: white;
+      border-top: 1px solid rgba(0,0,0,0.08);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      align-items: center;
+      text-align: center;
+      padding: 0 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      color: var(--text-sub);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .nav-item.active {
+      color: var(--primary);
+      font-weight: 800;
+    }
+
+    .nav-icon {
+      font-size: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Header -->
+    <div class="app-header">
+      <div class="brand-logo">
+        <span>🍊</span> 늘다
+      </div>
+      <div class="header-user">
+        나경 님 안녕하세요!
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+
+      <!-- Hero Banner -->
+      <div class="hero-banner">
+        <div class="hero-badge">오늘의 맞춤 추천</div>
+        <div class="hero-title">스마트폰으로<br>사진 잘 찍는 법! 📸</div>
+        <div class="hero-sub">차근차근 5분 만에 배워보세요</div>
+      </div>
+
+      <!-- Personal Survey Diagnostic -->
+      <div class="section-box">
+        <div class="section-title">
+          <span>📋</span> 오늘의 기분은 어떤가요?
+        </div>
+        <div class="survey-option selected" onclick="toggleSurvey(this)">
+          <span>😊 기분이 좋고 배울 준비가 됐어요!</span>
+          <div class="check-icon">✓</div>
+        </div>
+        <div class="survey-option" onclick="toggleSurvey(this)">
+          <span>☕ 커피 한 잔 하면서 천천히 볼래요</span>
+          <div class="check-icon">✓</div>
+        </div>
+        <div class="survey-option" onclick="toggleSurvey(this)">
+          <span>🤔 스마트폰 사용이 조금 어려워요</span>
+          <div class="check-icon">✓</div>
+        </div>
+        <button class="btn-survey-submit">선택할래요 👍</button>
+      </div>
+
+      <!-- Recommended Lessons -->
+      <div class="section-box">
+        <div class="section-title">
+          <span>🎓</span> 추천 학습 콘텐츠
+        </div>
+
+        <div class="lesson-card">
+          <div class="lesson-thumb">
+            📱
+            <div class="lesson-tag">사진/카메라</div>
+          </div>
+          <div class="lesson-info">
+            <div class="lesson-title">폰으로 멋진 풍경 사진 찍기</div>
+            <div class="lesson-meta">
+              <span>비교적 쉬워요</span> • <span>⏱️ 5분 소요</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="lesson-card">
+          <div class="lesson-thumb" style="background: linear-gradient(135deg, #ffc700 0%, #ffdb58 100%);">
+            ☕
+            <div class="lesson-tag">키오스크</div>
+          </div>
+          <div class="lesson-info">
+            <div class="lesson-title">카페 키오스크 당당하게 주문하기</div>
+            <div class="lesson-meta">
+              <span>조금 연습 필요</span> • <span>⏱️ 7분 소요</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Floating Chatbot Avatar Button -->
+    <a href="third-page.html" class="floating-avatar" title="느리와 대화하기">
+      <div class="avatar-inner">
+        🍊
+      </div>
+    </a>
+
+    <!-- Bottom Fixed 4-Tab Navigation -->
+    <div class="bottom-nav">
+      <a href="second-page.html" class="nav-item active">
+        <span class="nav-icon">📖</span>
+        <span>오늘의 수업</span>
+      </a>
+      <a href="#" class="nav-item">
+        <span class="nav-icon">🔄</span>
+        <span>복습</span>
+      </a>
+      <a href="third-page.html" class="nav-item">
+        <span class="nav-icon">💬</span>
+        <span>질문/챗봇</span>
+      </a>
+      <a href="first-page.html" class="nav-item">
+        <span class="nav-icon">👤</span>
+        <span>나의 정보</span>
+      </a>
+    </div>
+
+  </div>
+
+  <script>
+    function toggleSurvey(element) {
+      const options = document.querySelectorAll('.survey-option');
+      options.forEach(opt => opt.classList.remove('selected'));
+      element.classList.add('selected');
+    }
+  </script>
+</body>
+</html>

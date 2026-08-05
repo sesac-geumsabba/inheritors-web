@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>늘다 (Neulda) - 1. 온보딩 및 환경 설정</title>
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <style>
+    :root {
+      --primary: #f85029;
+      --primary-dark: #d14734;
+      --accent-yellow: #ffc700;
+      --accent-blue: #3b91c8;
+      --bg-cream: #f5f5f0;
+      --bg-card: #ffffff;
+      --text-main: #222222;
+      --text-sub: #666666;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+    }
+
+    body {
+      background-color: #e5e5e0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      color: var(--text-main);
+    }
+
+    /* Mobile Container Wrapper */
+    .app-container {
+      width: 100%;
+      max-width: 430px;
+      height: 900px;
+      max-height: 95vh;
+      background-color: var(--bg-cream);
+      border-radius: 36px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Header */
+    .app-header {
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-cream);
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .brand-logo {
+      font-weight: 800;
+      font-size: 22px;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .progress-bar-container {
+      width: 100%;
+      height: 6px;
+      background-color: #e0e0d8;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 50%;
+      background-color: var(--primary);
+      transition: width 0.3s ease;
+    }
+
+    /* Main Viewing Area (Top 50%) */
+    .viewing-area {
+      flex: 1;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    /* Neulda Character Avatar */
+    .character-box {
+      width: 120px;
+      height: 120px;
+      background-color: var(--primary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 20px rgba(248, 80, 41, 0.3);
+      position: relative;
+      animation: bounce 2s infinite ease-in-out;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    .character-face {
+      width: 90px;
+      height: 90px;
+      background: white;
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .character-ring {
+      width: 42px;
+      height: 42px;
+      border: 5px solid var(--primary);
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 3s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .welcome-title {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--text-main);
+      line-height: 1.3;
+    }
+
+    .welcome-desc {
+      font-size: 16px;
+      color: var(--text-sub);
+      font-weight: 500;
+      line-height: 1.5;
+    }
+
+    /* Step Content Area */
+    .step-card {
+      background: white;
+      width: 100%;
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      text-align: left;
+    }
+
+    .step-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: var(--text-main);
+    }
+
+    /* Font Size Slider Demo */
+    .font-size-demo {
+      background-color: var(--bg-cream);
+      padding: 16px;
+      border-radius: 12px;
+      text-align: center;
+      margin-bottom: 16px;
+      font-size: 20px;
+      font-weight: 700;
+      transition: font-size 0.2s ease;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .slider-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .slider-wrapper span {
+      font-weight: 800;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      accent-color: var(--primary);
+      height: 10px;
+    }
+
+    /* Voice Avatar Grid */
+    .voice-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .voice-card {
+      background: var(--bg-cream);
+      border: 2px solid transparent;
+      border-radius: 14px;
+      padding: 12px 6px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .voice-card.selected {
+      border-color: var(--primary);
+      background: #fff5f2;
+    }
+
+    .voice-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      margin: 0 auto 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .voice-name {
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    /* Interaction Area (Bottom 50% / Fixed CTA) */
+    .interaction-area {
+      padding: 20px 24px 28px;
+      background: white;
+      border-top-left-radius: 28px;
+      border-top-right-radius: 28px;
+      box-shadow: 0 -8px 20px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .btn-primary {
+      width: 100%;
+      height: 56px;
+      background-color: var(--primary);
+      color: white;
+      font-size: 18px;
+      font-weight: 700;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 6px 16px rgba(248, 80, 41, 0.3);
+      transition: background-color 0.2s, transform 0.1s;
+      text-decoration: none;
+    }
+
+    .btn-primary:active {
+      transform: scale(0.98);
+      background-color: var(--primary-dark);
+    }
+
+    .nav-links {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 6px;
+    }
+
+    .nav-link-btn {
+      color: var(--text-sub);
+      font-size: 14px;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Header -->
+    <div class="app-header">
+      <div class="brand-logo">
+        <span>🍊</span> 늘다 (Neulda)
+      </div>
+      <span style="font-size: 14px; font-weight: 600; color: var(--primary);">Step 1/3</span>
+    </div>
+    
+    <div class="progress-bar-container">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <!-- Viewing Area -->
+    <div class="viewing-area">
+      <!-- Character Avatar -->
+      <div class="character-box">
+        <div class="character-face">
+          <div class="character-ring"></div>
+        </div>
+      </div>
+
+      <div>
+        <h1 class="welcome-title">안녕하세요!<br>저는 <span style="color: var(--primary);">'느리'</span>라고 해요</h1>
+        <p class="welcome-desc" style="margin-top: 6px;">디지털 세상이 무섭지 않도록<br>오늘부터 차근차근 함께 배워요!</p>
+      </div>
+
+      <!-- Step Card: Font Size & Voice Setup -->
+      <div class="step-card">
+        <div class="step-title">👀 1. 글자 크기 조절</div>
+        <div class="font-size-demo" id="fontDemo">
+          이 글씨가 잘 보이시나요?
+        </div>
+        <div class="slider-wrapper">
+          <span style="font-size: 14px;">가</span>
+          <input type="range" id="fontSlider" min="16" max="28" value="20" oninput="updateFontSize(this.value)">
+          <span style="font-size: 24px;">가</span>
+        </div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-title">🎙️ 2. 마음에 드는 목소리 선택</div>
+        <div class="voice-grid">
+          <div class="voice-card selected" onclick="selectVoice(this)">
+            <div class="voice-icon" style="background: var(--primary);">오렌지</div>
+            <div class="voice-name">밝음</div>
+          </div>
+          <div class="voice-card" onclick="selectVoice(this)">
+            <div class="voice-icon" style="background: var(--accent-yellow);">토끼</div>
+            <div class="voice-name">친근</div>
+          </div>
+          <div class="voice-card" onclick="selectVoice(this)">
+            <div class="voice-icon" style="background: var(--accent-blue);">곰</div>
+            <div class="voice-name">차분</div>
+          </div>
+          <div class="voice-card" onclick="selectVoice(this)">
+            <div class="voice-icon" style="background: #888888;">고양이</div>
+            <div class="voice-name">다정</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interaction Area -->
+    <div class="interaction-area">
+      <a href="second-page.html" class="btn-primary">
+        이 설정으로 시작하기 👍
+      </a>
+      <div class="nav-links">
+        <a href="first-page.html" style="font-size: 14px; font-weight: 700; color: var(--primary);">1. 온보딩</a>
+        <a href="second-page.html" style="font-size: 14px; color: var(--text-sub);">2. 메인/수업</a>
+        <a href="third-page.html" style="font-size: 14px; color: var(--text-sub);">3. 챗봇/학습</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function updateFontSize(val) {
+      document.getElementById('fontDemo').style.fontSize = val + 'px';
+    }
+
+    function selectVoice(element) {
+      const cards = document.querySelectorAll('.voice-card');
+      cards.forEach(card => card.classList.remove('selected'));
+      element.classList.add('selected');
+    }
+  </script>
+</body>
+</html>
