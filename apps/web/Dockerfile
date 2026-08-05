@@ -1,6 +1,10 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
+# npm workspaces(root package.json)라 루트 lockfile만으로는 부족하다 — apps/web/package.json도
+# 있어야 npm ci가 workspace를 인식해서 next 등을 node_modules/.bin에 링크한다. 없으면 빌드
+# 시점에 "sh: next: not found"(exit 127)로 죽는다(실측).
 COPY package.json package-lock.json ./
+COPY apps/web/package.json apps/web/package.json
 RUN npm ci
 
 FROM node:20-alpine AS builder
@@ -16,9 +20,11 @@ RUN npm run build
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+# turbo(모노레포)가 빌드하면 standalone 출력이 apps/web/ 아래로 중첩된다
+# (.next/standalone/apps/web/server.js) — 루트 바로 밑이 아님(실측).
+COPY --from=builder /app/apps/web/public ./apps/web/public
+COPY --from=builder /app/apps/web/.next/standalone ./
+COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
 
 EXPOSE 3000
-CMD ["node", "server.js"]
+CMD ["node", "apps/web/server.js"]
