@@ -7,6 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.db import get_db
+from app.mcp_client import mcp_client
 from app.routers.chat_router import router as chat_router
 from app.routers.mcp_router import router as mcp_router
 from app.routers.quick_buttons_router import router as quick_buttons_router
@@ -17,7 +18,7 @@ from packages.rag.embeddings import embed_query
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # 첫 실사용자가 bge-m3/Ollama 콜드 로드를 겪지 않도록 기동 시 미리 로딩.
-    # 둘 다 로컬 dev에서 아직 준비 안 됐을 수 있어 실패해도 서버는 계속 기동.
+    # 셋 다 로컬 dev에서 아직 준비 안 됐을 수 있어 실패해도 서버는 계속 기동.
     try:
         embed_query("warmup")
     except Exception as e:
@@ -26,7 +27,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         warm_up()
     except Exception as e:
         print(f"[warn] Ollama warm-up 실패, 첫 /chat 요청이 콜드 로드될 수 있음: {e}")
+    try:
+        # korean-law-mcp는 콜드 기동에 1~2초 걸려서(pdfjs/onnxruntime/sharp 등 무거운 require)
+        # 미리 띄워두지 않으면 첫 판례/법령 질문이 라우터 타임아웃에 걸릴 수 있음.
+        await mcp_client.start()
+    except Exception as e:
+        print(f"[warn] korean-law-mcp 기동 실패, 판례/법령 검색이 안 될 수 있음: {e}")
     yield
+    await mcp_client.aclose()
 
 
 app = FastAPI(title="유언대용신탁 자산승계 설계 챗봇 API", lifespan=lifespan)

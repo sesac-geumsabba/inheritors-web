@@ -2,10 +2,9 @@ from fastapi import APIRouter, Query
 from pydantic import BaseModel
 from typing import Any, Dict, List, Optional
 
-from app.mcp_client import KoreanLawMCPClient
+from app.mcp_client import mcp_client
 
 router = APIRouter(prefix="/api/mcp", tags=["MCP Korean Law"])
-mcp_client = KoreanLawMCPClient()
 
 
 class VerifyCitationsRequest(BaseModel):

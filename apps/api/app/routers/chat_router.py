@@ -9,13 +9,12 @@ from sqlalchemy.orm import Session
 
 from app.chat import ChatRequest, ContinueRequest
 from app.db import get_db
-from app.mcp_client import KoreanLawMCPClient
+from app.mcp_client import mcp_client
 from packages.rag.chains import continue_answer, stream_answer
 from packages.rag.embeddings import embed_query
 from packages.rag.retriever import RetrievedChunk, to_vector_literal
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
-mcp_client = KoreanLawMCPClient()
 
 _PRECEDENT_KEYWORDS = ["판례", "사건", "판결", "대법원", "지방법원"]
 _LAW_KEYWORDS = ["법", "조문", "신탁", "상속", "증여", "유류분"]
