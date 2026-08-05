@@ -14,7 +14,6 @@ from app.chat_shared import (
     create_session,
     event_stream,
     fetch_external_sources,
-    is_precedent_only,
     load_context_for_continue,
     save_message,
 )
@@ -31,16 +30,18 @@ async def chat(req: ChatRequest, db: Session = Depends(get_db)) -> StreamingResp
     query_embedding = embed_query(req.message)
     save_message(db, session_id, "user", req.message, query_embedding)
 
-    external_sources = await fetch_external_sources(req.message)
+    external_sources, precedent_only, mcp_meta = await fetch_external_sources(req.message)
     tokens, chunks = stream_answer(
         db,
         req.message,
         query_embedding,
         external_sources=external_sources,
-        skip_internal=is_precedent_only(req.message),
+        skip_internal=precedent_only,
     )
 
-    stream = event_stream(db, session_id, tokens, chunks, external_sources, emit_sources=True)
+    stream = event_stream(
+        db, session_id, tokens, chunks, external_sources, emit_sources=True, mcp_meta=mcp_meta
+    )
     return StreamingResponse(stream, media_type="text/event-stream")
 
 

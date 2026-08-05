@@ -5,56 +5,15 @@ routers/chat_router.py(Ollama, /chat)와 routers/chat_openai_router.py(OpenAI, /
 stream_answer/continue_answer를 어디서 가져오느냐뿐이고, 검색/저장/스트리밍 방식은 완전히 같다.
 """
 
-import asyncio
 import json
-import re
 from collections.abc import Iterator
 
 from fastapi import HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.mcp_client import mcp_client
+from app.mcp_agent import select_and_run
 from packages.rag.retriever import RetrievedChunk, to_vector_literal
-
-_PRECEDENT_KEYWORDS = ["판례", "사건", "판결", "대법원", "지방법원"]
-_LAW_KEYWORDS = ["법", "조문", "신탁", "상속", "증여", "유류분"]
-
-# ponytail: 법제처 검색 API는 공백구분 키워드를 AND로 처리해서 자연어 질문을 그대로 넣으면
-# 거의 항상 0건 (실측 확인). "유언대용신탁과 유류분" 같은 압축 표현도 실패하고,
-# "신탁 유류분"처럼 기본 법률용어로 쪼개야 매칭됨 — 분류용 키워드와 별도로 검색어 후보를 둔다.
-# search_law(법령명 검색)에 "판례"/"대법원" 같은 판례 전용어를 섞으면 그것도 0건이 돼서
-# (실측 확인) 도메인별로 후보 단어 집합을 분리한다. search_law는 법령 "제목" 매칭이라
-# "유류분"처럼 실제 법령명에 안 쓰이는 단어를 AND로 섞으면 여전히 0건이라
-# (실측: "신탁 유류분"도 실패) 첫 매칭어 하나만 사용 — search_decisions(판례 전문검색)는
-# 여러 단어 AND가 오히려 정확도를 높여서 그대로 둠.
-_LAW_SEARCH_TERMS = ["신탁", "상속", "증여", "유류분", "수익자", "위탁자"]
-# "판례"/"대법원"/"지방법원"은 판례 여부 분류·정확도 보정용 보조어일 뿐 그 자체로는 검색
-# 주제가 아니다 — 아래 매칭이 이 보조어만 걸리면(=신탁/상속 밖 질의) _extract_keywords로
-# 넘어가야 한다("부동산 재건축 판례" 같은 질의에서 "판례"만 남으면 검색이 무의미해짐, 실측 확인).
-_PRECEDENT_BOOST_TERMS = ["판례", "대법원", "지방법원"]
-_PRECEDENT_SEARCH_TERMS = _LAW_SEARCH_TERMS + _PRECEDENT_BOOST_TERMS
-
-# ponytail: 신탁/상속 도메인 밖 질의(예: "부동산 재건축 판례")는 위 고정 어휘 목록에 하나도
-# 안 걸려서 자연어 원문이 그대로 MCP에 넘어가는데, 법제처 API가 공백 단어를 AND로 묶어
-# 대부분 0건이 된다(실측 확인) — 조사/군더더기를 떼고 실제 명사만 남겨서 재시도한다.
-# 형태소 분석기 없이 정규식으로 흔한 조사만 떼는 수준이라 완벽하지 않음 — 검색이 계속
-# 빗나가면 KoNLPy 등 형태소 분석기 도입 검토.
-_QUERY_STOPWORDS = {
-    "관련", "대해서", "대해", "대한", "설명해줘", "설명해주세요", "알려줘", "알려주세요",
-    "궁금해요", "궁금합니다", "무엇인가요", "무엇", "어떻게", "되나요", "인가요", "좀", "혹시",
-    "판례", "판결", "사건", "대법원", "지방법원", "법령",
-}
-_TRAILING_PARTICLE_RE = re.compile(r"(은|는|이|가|을|를|의|에|에서|으로|로|와|과|도|만)$")
-
-
-def _extract_keywords(query: str, max_terms: int = 3) -> str:
-    keywords = []
-    for word in query.split():
-        cleaned = _TRAILING_PARTICLE_RE.sub("", word)
-        if cleaned and cleaned not in _QUERY_STOPWORDS and len(cleaned) > 1:
-            keywords.append(cleaned)
-    return " ".join(keywords[:max_terms])
 
 # ponytail: 답변을 한 번에 다 쏟아내면 채팅창에서 읽기 피로도가 커서, 문장이 끝나는 시점(마침표)에
 # 한 번 멈추고 "네, 더 설명해주세요"로 이어보게 한다. LLM 생성 자체를 여기서 끊기 때문에(for
@@ -64,20 +23,6 @@ def _extract_keywords(query: str, max_terms: int = 3) -> str:
 # 감으로 정한 값이라 실사용 피드백 쌓이면 다시 조정.
 PAGE_CHAR_LIMIT = 800
 _SENTENCE_END = (".", "!", "?")
-
-
-def is_precedent_only(query: str) -> bool:
-    return any(k in query for k in _PRECEDENT_KEYWORDS)
-
-
-def _build_mcp_query(query: str, terms: list[str], max_terms: int | None = None) -> str:
-    matched = [t for t in terms if t in query]
-    # 실제 주제어(신탁/상속/증여 등)는 하나도 안 걸리고 "판례" 같은 보조어만 걸렸으면
-    # 그 보조어 하나로는 검색이 무의미하니 일반 키워드 추출로 넘어간다.
-    domain_matched = [t for t in matched if t not in _PRECEDENT_BOOST_TERMS]
-    if not domain_matched:
-        return _extract_keywords(query) or query
-    return " ".join(matched[:max_terms] if max_terms else matched)
 
 
 def create_session(db: Session) -> int:
@@ -205,28 +150,50 @@ def load_context_for_continue(
     return session_id, query, previous_answer, chunks, external_sources
 
 
-async def fetch_external_sources(query: str) -> list[dict]:
-    """판례/법령 관련 질의로 보이면 korean-law-mcp를 병렬 호출. 관련 없어 보이면 스킵."""
-    is_precedent = any(k in query for k in _PRECEDENT_KEYWORDS)
-    is_law = any(k in query for k in _LAW_KEYWORDS)
-    if not is_precedent and not is_law:
-        return []
+_MCP_TOOL_LABEL = {"search_law": "법령", "search_decisions": "판례"}
 
-    tasks = []
-    if is_law:
-        tasks.append(mcp_client.search_law(_build_mcp_query(query, _LAW_SEARCH_TERMS, max_terms=1)))
-    if is_precedent:
-        mcp_query = _build_mcp_query(query, _PRECEDENT_SEARCH_TERMS)
-        tasks.append(mcp_client.search_decisions(mcp_query))
 
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-    sources: list[dict] = []
-    for r in results:
-        if isinstance(r, Exception):
-            continue
-        # mcp_client는 오류/결과없음도 score=0.0 항목으로 반환 — 답변 근거로 못 쓰니 걸러냄
-        sources.extend(s for s in r if s.get("score", 0) > 0)
-    return sources
+def _mcp_reason(tool_calls_used: list[dict]) -> str:
+    """LLM이 실제로 mcp_client에 넘긴 (도구, 검색어) 목록을 사람이 읽을 한 줄로 요약.
+
+    LLM의 판단 근거 자체(자유 서술)는 tool-calling 응답에 들어있지 않아 만들어낼 수
+    없으므로, 대신 실제로 무엇을 검색했는지를 보여준다 — "왜 호출됐는지"를 확인할 수
+    있는 가장 정확한 근거는 어떤 검색어로 어떤 도구를 호출했는가이기 때문.
+    """
+    if not tool_calls_used:
+        return ""
+    parts = [
+        f"{_MCP_TOOL_LABEL.get(c['tool'], c['tool'])} '{c['query']}'" for c in tool_calls_used
+    ]
+    return " · ".join(parts) + " 검색을 위해 호출"
+
+
+async def fetch_external_sources(query: str) -> tuple[list[dict], bool, dict]:
+    """질의를 분석해 korean-law-mcp 호출 여부/도구/검색어를 LLM이 판단하고 실행한다.
+
+    반환하는 precedent_only=True는 "판례 도구만 선택됐고 실제 판례 결과도 있었다"는
+    뜻으로, 이때만 내부 RAG를 스킵한다 — 판례 도구를 선택했더라도 결과가 없으면(호출
+    실패/0건) 내부 RAG를 폴백으로 계속 써야 답변 근거가 사라지지 않는다.
+
+    mcp_meta는 MCP 호출 여부/도구/호출 이유를 프론트에 보여주기 위한 정보다. MCP 호출이
+    실패하거나 0건이라 sources에서 걸러져도 mcp_meta["called"]는 True로 남아있어, "MCP를
+    호출은 했다"는 사실 자체를 프론트에서 확인할 수 있다.
+    """
+    sources, called_tools, tool_calls_used = await select_and_run(query)
+
+    has_case_law_source = any(s.get("source_type") == "case_law" for s in sources)
+    precedent_only = (
+        "search_decisions" in called_tools
+        and "search_law" not in called_tools
+        and has_case_law_source
+    )
+
+    mcp_meta = {
+        "called": bool(called_tools),
+        "tools": sorted(called_tools),
+        "reason": _mcp_reason(tool_calls_used),
+    }
+    return sources, precedent_only, mcp_meta
 
 
 def _sse_sources(chunks: list[RetrievedChunk], external_sources: list[dict]) -> list[dict]:
@@ -260,6 +227,7 @@ def event_stream(
     chunks: list[RetrievedChunk],
     external_sources: list[dict],
     emit_sources: bool,
+    mcp_meta: dict | None = None,
 ) -> Iterator[str]:
     """토큰을 SSE로 흘려보내다 문장이 끝나는 시점에 budget을 넘기면 생성을 끊고
     "더 설명해드릴까요?"를 붙인 뒤 이어쓰기용 event를 보낸다. /chat, /chat/openai가 공유.
@@ -267,6 +235,11 @@ def event_stream(
     if emit_sources:
         sse_sources = _sse_sources(chunks, external_sources)
         yield f"event: sources\ndata: {json.dumps(sse_sources, ensure_ascii=False)}\n\n"
+        # 프론트에서 "참고 문서" 카드 바로 아래에 MCP 호출 여부/이유를 보여주기 위한 이벤트 —
+        # MCP 호출이 실패/0건이라 sources에 아무것도 안 남아도 called는 True로 남아있어야
+        # "호출은 했다"를 확인할 수 있어 sources와 분리된 별도 이벤트로 보낸다.
+        status = mcp_meta or {"called": False, "tools": [], "reason": ""}
+        yield f"event: mcp_status\ndata: {json.dumps(status, ensure_ascii=False)}\n\n"
 
     parts: list[str] = []
     paused_early = False

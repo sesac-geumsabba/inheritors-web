@@ -19,11 +19,18 @@ const SOURCE_ICON: Record<ChatSource["source_type"], string> = {
   statute: "menu_book",
 };
 
+interface McpStatus {
+  called: boolean;
+  tools: string[];
+  reason: string;
+}
+
 interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
   sources?: ChatSource[];
+  mcpStatus?: McpStatus;
   awaitingContinueId?: number;
 }
 
@@ -101,6 +108,8 @@ export default function ChatPage() {
 
         if (eventType === "sources") {
           updateMessage(botMsgId, { sources: JSON.parse(data) as ChatSource[] });
+        } else if (eventType === "mcp_status") {
+          updateMessage(botMsgId, { mcpStatus: JSON.parse(data) as McpStatus });
         } else if (eventType === "awaiting_continue") {
           const t = JSON.parse(data) as { message_id: number };
           updateMessage(botMsgId, { awaitingContinueId: t.message_id });
@@ -258,6 +267,14 @@ export default function ChatPage() {
                           </li>
                         ))}
                       </ul>
+                    </div>
+                  )}
+
+                  {/* MCP 호출 여부/이유 — 참고 문서 카드 바로 아래에 노출 */}
+                  {msg.mcpStatus?.called && (
+                    <div className="px-1 text-label-md font-label-md text-on-surface-variant opacity-70">
+                      <p>korean-law-mcp를 호출했습니다</p>
+                      {msg.mcpStatus.reason && <p>{msg.mcpStatus.reason}</p>}
                     </div>
                   )}
                 </div>
