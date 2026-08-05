@@ -20,12 +20,22 @@ const SOURCE_ICON: Record<ChatSource["source_type"], string> = {
   statute: "menu_book",
 };
 
+interface McpStatus {
+  called: boolean;
+  tools: string[];
+  reason: string;
+}
+
 interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
   sources?: ChatSource[];
+  mcpStatus?: McpStatus;
   awaitingContinueId?: number;
+  // 서버가 "이 답변은 몇 번째 이어보기 결과인지"를 함께 보내준 값 — 다음 이어보기 요청 시
+  // continue_count로 그대로 +1 해서 돌려줘야 서버가 상한(MAX_CONTINUE_DEPTH)을 셀 수 있다.
+  awaitingContinueCount?: number;
 }
 
 const DISCLAIMER =
@@ -54,6 +64,9 @@ export default function ChatPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const sessionIdRef = useRef<number | null>(null);
   const scrollAnchorRef = useRef<HTMLDivElement>(null);
+  // isStreaming state는 다음 렌더까지 반영이 늦어질 수 있어(연타/엔터 연타 시 레이스),
+  // 요청 시작 시점에 동기적으로 막을 수 있는 ref 락을 별도로 둔다.
+  const isBusyRef = useRef(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   // 토큰이 올 때마다 messages가 바뀌어서 매번 무조건 바닥으로 스크롤하면, 답변이 스트리밍되는
   // 동안 위로 스크롤해서 이전 대화를 보려고 해도 계속 아래로 끌려 내려간다 — 사용자가 이미
@@ -107,9 +120,14 @@ export default function ChatPage() {
 
         if (eventType === "sources") {
           updateMessage(botMsgId, { sources: JSON.parse(data) as ChatSource[] });
+        } else if (eventType === "mcp_status") {
+          updateMessage(botMsgId, { mcpStatus: JSON.parse(data) as McpStatus });
         } else if (eventType === "awaiting_continue") {
-          const t = JSON.parse(data) as { message_id: number };
-          updateMessage(botMsgId, { awaitingContinueId: t.message_id });
+          const t = JSON.parse(data) as { message_id: number; continue_count: number };
+          updateMessage(botMsgId, {
+            awaitingContinueId: t.message_id,
+            awaitingContinueCount: t.continue_count,
+          });
         } else if (eventType === "done") {
           sessionIdRef.current = (JSON.parse(data) as { session_id: number }).session_id;
         } else {
@@ -120,7 +138,8 @@ export default function ChatPage() {
   }
 
   async function send(query: string) {
-    if (!query.trim() || isStreaming) return;
+    if (!query.trim() || isBusyRef.current) return;
+    isBusyRef.current = true;
 
     const botMsgId = `a-${Date.now()}`;
     isNearBottomRef.current = true; // 내가 직접 보낸 메시지는 항상 화면에 따라와야 함
@@ -145,12 +164,15 @@ export default function ChatPage() {
       });
     } finally {
       setIsStreaming(false);
+      isBusyRef.current = false;
     }
   }
 
-  async function continueAnswer(sourceMsgId: string, messageId: number) {
-    if (isStreaming) return;
-    updateMessage(sourceMsgId, { awaitingContinueId: undefined });
+  async function continueAnswer(sourceMsgId: string, messageId: number, continueCount: number) {
+    if (isBusyRef.current) return;
+    isBusyRef.current = true;
+    // 클릭 즉시 버튼을 없애서 같은 답변에 대해 다시 누를 수 없게 한다.
+    updateMessage(sourceMsgId, { awaitingContinueId: undefined, awaitingContinueCount: undefined });
 
     const botMsgId = `a-${Date.now()}`;
     isNearBottomRef.current = true; // "네, 더 설명해주세요" 클릭도 내 액션이니 따라가기 재개
@@ -165,7 +187,7 @@ export default function ChatPage() {
       const res = await fetch(`${API_BASE}/chat/openai/continue`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message_id: messageId }),
+        body: JSON.stringify({ message_id: messageId, continue_count: continueCount + 1 }),
       });
       await consumeStream(res, botMsgId);
     } catch {
@@ -174,6 +196,7 @@ export default function ChatPage() {
       });
     } finally {
       setIsStreaming(false);
+      isBusyRef.current = false;
     }
   }
 
@@ -230,7 +253,9 @@ export default function ChatPage() {
                   {msg.awaitingContinueId !== undefined && (
                     <button
                       type="button"
-                      onClick={() => continueAnswer(msg.id, msg.awaitingContinueId!)}
+                      onClick={() =>
+                        continueAnswer(msg.id, msg.awaitingContinueId!, msg.awaitingContinueCount ?? 0)
+                      }
                       disabled={isStreaming}
                       className="self-start rounded-full border border-brand-pink bg-surface-container-lowest px-4 py-2 text-label-sm font-bold text-brand-pink shadow-sm transition-colors hover:bg-surface-variant disabled:opacity-50"
                     >
@@ -278,6 +303,14 @@ export default function ChatPage() {
                           </li>
                         ))}
                       </ul>
+                    </div>
+                  )}
+
+                  {/* MCP 호출 여부/이유 — 참고 문서 카드 바로 아래에 노출 */}
+                  {msg.mcpStatus?.called && (
+                    <div className="px-1 text-label-md font-label-md text-on-surface-variant opacity-70">
+                      <p>korean-law-mcp를 호출했습니다</p>
+                      {msg.mcpStatus.reason && <p>{msg.mcpStatus.reason}</p>}
                     </div>
                   )}
 

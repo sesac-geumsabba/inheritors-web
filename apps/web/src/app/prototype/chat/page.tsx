@@ -25,6 +25,9 @@ interface ChatMessage {
   content: string;
   sources?: ChatSource[];
   awaitingContinueId?: number;
+  // 서버가 "이 답변은 몇 번째 이어보기 결과인지"를 함께 보내준 값 — 다음 이어보기 요청 시
+  // continue_count로 그대로 +1 해서 돌려줘야 서버가 상한(MAX_CONTINUE_DEPTH)을 셀 수 있다.
+  awaitingContinueCount?: number;
 }
 
 const DISCLAIMER =
@@ -62,6 +65,9 @@ export default function ChatPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const sessionIdRef = useRef<number | null>(null);
   const scrollAnchorRef = useRef<HTMLDivElement>(null);
+  // isStreaming state는 다음 렌더까지 반영이 늦어질 수 있어(연타/엔터 연타 시 레이스),
+  // 요청 시작 시점에 동기적으로 막을 수 있는 ref 락을 별도로 둔다.
+  const isBusyRef = useRef(false);
 
   useEffect(() => {
     scrollAnchorRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -102,8 +108,11 @@ export default function ChatPage() {
         if (eventType === "sources") {
           updateMessage(botMsgId, { sources: JSON.parse(data) as ChatSource[] });
         } else if (eventType === "awaiting_continue") {
-          const t = JSON.parse(data) as { message_id: number };
-          updateMessage(botMsgId, { awaitingContinueId: t.message_id });
+          const t = JSON.parse(data) as { message_id: number; continue_count: number };
+          updateMessage(botMsgId, {
+            awaitingContinueId: t.message_id,
+            awaitingContinueCount: t.continue_count,
+          });
         } else if (eventType === "done") {
           sessionIdRef.current = (JSON.parse(data) as { session_id: number }).session_id;
         } else {
@@ -114,7 +123,8 @@ export default function ChatPage() {
   }
 
   async function send(query: string) {
-    if (!query.trim() || isStreaming) return;
+    if (!query.trim() || isBusyRef.current) return;
+    isBusyRef.current = true;
 
     const botMsgId = `a-${Date.now()}`;
     setMessages((prev) => [
@@ -138,12 +148,15 @@ export default function ChatPage() {
       });
     } finally {
       setIsStreaming(false);
+      isBusyRef.current = false;
     }
   }
 
-  async function continueAnswer(sourceMsgId: string, messageId: number) {
-    if (isStreaming) return;
-    updateMessage(sourceMsgId, { awaitingContinueId: undefined });
+  async function continueAnswer(sourceMsgId: string, messageId: number, continueCount: number) {
+    if (isBusyRef.current) return;
+    isBusyRef.current = true;
+    // 클릭 즉시 버튼을 없애서 같은 답변에 대해 다시 누를 수 없게 한다.
+    updateMessage(sourceMsgId, { awaitingContinueId: undefined, awaitingContinueCount: undefined });
 
     const botMsgId = `a-${Date.now()}`;
     setMessages((prev) => [
@@ -157,7 +170,7 @@ export default function ChatPage() {
       const res = await fetch(`${API_BASE}/chat/continue`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message_id: messageId }),
+        body: JSON.stringify({ message_id: messageId, continue_count: continueCount + 1 }),
       });
       await consumeStream(res, botMsgId);
     } catch {
@@ -166,6 +179,7 @@ export default function ChatPage() {
       });
     } finally {
       setIsStreaming(false);
+      isBusyRef.current = false;
     }
   }
 
@@ -210,7 +224,9 @@ export default function ChatPage() {
                   {msg.awaitingContinueId !== undefined && (
                     <button
                       type="button"
-                      onClick={() => continueAnswer(msg.id, msg.awaitingContinueId!)}
+                      onClick={() =>
+                        continueAnswer(msg.id, msg.awaitingContinueId!, msg.awaitingContinueCount ?? 0)
+                      }
                       disabled={isStreaming}
                       className="self-start rounded-full border border-outline-variant bg-surface px-4 py-2 text-label-lg font-label-lg text-secondary shadow-sm transition-all active:scale-[0.98] disabled:opacity-50"
                     >

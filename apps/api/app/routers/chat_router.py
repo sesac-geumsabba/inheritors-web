@@ -13,7 +13,6 @@ from app.chat_shared import (
     create_session,
     event_stream,
     fetch_external_sources,
-    is_precedent_only,
     load_context_for_continue,
     save_message,
 )
@@ -30,7 +29,7 @@ async def chat(req: ChatRequest, db: Session = Depends(get_db)) -> StreamingResp
     query_embedding = embed_query(req.message)
     save_message(db, session_id, "user", req.message, query_embedding)
 
-    external_sources = await fetch_external_sources(req.message)
+    external_sources, precedent_only, mcp_meta = await fetch_external_sources(req.message)
     # ponytail: 판례 질의는 내부 DB(신탁 상품설명서/계약서)에 판례 원문이 없어서 검색해봐야
     # "유류분" 등 비슷한 단어가 들어간 상품 안내 문구만 걸림 — MCP 실제 판례를 우선하고
     # 내부 검색은 스킵. 신탁 상품/법령 질의는 기존대로 내부 문서를 계속 사용.
@@ -39,10 +38,12 @@ async def chat(req: ChatRequest, db: Session = Depends(get_db)) -> StreamingResp
         req.message,
         query_embedding,
         external_sources=external_sources,
-        skip_internal=is_precedent_only(req.message),
+        skip_internal=precedent_only,
     )
 
-    stream = event_stream(db, session_id, tokens, chunks, external_sources, emit_sources=True)
+    stream = event_stream(
+        db, session_id, tokens, chunks, external_sources, emit_sources=True, mcp_meta=mcp_meta
+    )
     return StreamingResponse(stream, media_type="text/event-stream")
 
 
@@ -53,5 +54,13 @@ def chat_continue(req: ContinueRequest, db: Session = Depends(get_db)) -> Stream
         db, req.message_id
     )
     tokens = continue_answer(query, previous_answer, chunks, external_sources)
-    stream = event_stream(db, session_id, tokens, chunks, external_sources, emit_sources=False)
+    stream = event_stream(
+        db,
+        session_id,
+        tokens,
+        chunks,
+        external_sources,
+        emit_sources=False,
+        continue_count=req.continue_count,
+    )
     return StreamingResponse(stream, media_type="text/event-stream")
