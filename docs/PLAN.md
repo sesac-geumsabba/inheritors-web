@@ -57,11 +57,35 @@
 - pgvector `<=>` 코사인 유사도로 `chunks.embedding` 검색하는 리트리버 (FN-CORE-02)
 - 검색 결과를 `message_sources`(score/rank 포함)에 기록하는 로직 (FN-CORE-02)
 - 내부 문서 기반 RAG 체인 + Ollama(EEVE-Korean) 스트리밍 응답, no-context 임계값 폴백 (FN-CORE-02)
-- `feat/rag-chatbot` 브랜치에서 `/prototype/chat` 프론트 연동까지 완료, 로컬 end-to-end 테스트 완료 (아직 staging PR 전)
+- `/chat` 라우터의 `ERR_INCOMPLETE_CHUNKED_ENCODING` 버그 수정 — LLM 스트리밍 중 예외가 나도
+  안내 메시지로 스트림을 정상 종료하도록 처리 (FN-CORE-02)
+- 답변을 문장 단위로 끊고 "더 설명해드릴까요?"로 이어 보여주는 페이싱 기능 — 문장이 끝나는
+  지점에서 LLM 생성 자체를 중단해 대기시간 단축, `POST /chat/continue`로 원래 근거를
+  재검색 없이 재사용해 LangChain 대화 맥락(AIMessage)으로 이어쓰기 (FN-CORE-02)
+- 법률/세무 자문이 아님을 알리는 고지 문구를 답변마다 표시 (FN-CORE-02)
+- 은행명 줄임 표기(`KB`/`IBK`) 검색 필터 버그 수정 — 리트리버가 풀네임만 인식해 타행 문서가
+  섞여 나오던 문제 (FN-CORE-02)
+- **korean-law-mcp 실제 연동** — npm 패키지 미설치 + `subprocess.run(shell=True)` POSIX
+  버그로 판례/법령 검색이 항상 조용히 실패하던 문제의 근본 원인 확인 후 수정. 호출마다
+  새 프로세스를 spawn하던 구조를 FastAPI 수명 동안 유지되는 단일 프로세스로 전환(`main.py`
+  lifespan에서 시작/종료). `/chat`에 "판례"/"대법원" 등 키워드가 있으면 MCP 검색 결과가
+  `sources`와 Main LLM 컨텍스트(`[법령/판례]`)에 실제로 반영되는 것까지 end-to-end 확인
+  (FN-CORE-04)
+- **EC2 배포용 Ollama Docker 이미지**: 답변 생성 모델(EEVE-Korean 10.8B Q4, ~6.5GB)을
+  이미지에 미리 구워 넣어 컴퓨터마다 재다운로드 불필요하게 함(`infra/ollama/Dockerfile`),
+  Docker Hub(`popopododo/inheritors-ollama`)에 push. CPU 전용 배포 대상(AWS Graviton/t4g
+  등)에는 안 쓰는 CUDA/Jetpack GPU 백엔드(~3.5GB)를 멀티스테이지 빌드로 제거해
+  10.7GB → 6.67GB로 경량화. `infra/nginx/ollama.conf`(스트리밍 대응 프록시 설정)와
+  `infra/docker-compose.yml`(컨테이너 네트워크 연결, 포트 루프백 바인딩) 작성
+- PR: [#18](https://github.com/sesac-geumsabba/inheritors-web/pull/18)(답변 페이싱/이어쓰기 +
+  Ollama Docker), [#19](https://github.com/sesac-geumsabba/inheritors-web/pull/19)(korean-law-mcp
+  수정) — `staging` 대상, 리뷰/머지 전
 
 ### 다음 단계 (미착수)
 
-- MCP(법원 판례 API·법제처 API) 연동 및 `source_type='case_law'/'statute'` 케이스 처리 (FN-CORE-04)
-- MCP 타임아웃 폴백, 스미싱 감지 예외 처리 (FN-CORE-02 원 스펙)
-- EC2 배포용 Ollama+모델 Docker 이미지 빌드 및 ECR 배포 (상세는 [docs/RAG.md](./RAG.md) 6절)
-- `feat/rag-chatbot` → `staging` PR
+- 스미싱 감지 예외 처리 (FN-CORE-02 원 스펙)
+- EC2 실제 배포 및 검증 — 현재 후보 인스턴스(t4g.nano, RAM 0.5GB)는 모델(6.5GB)을 못 올려서
+  Ollama는 더 큰 인스턴스(최소 8GB+ RAM 권장)에 올리고 API 서버만 t4g.nano에 두는 등
+  인스턴스 사이징 재검토 필요
+- 답변 자체의 품질 이슈: 10.8B 양자화 모델이 가끔 시스템 프롬프트를 스스로 읊거나 질문을
+  반복하는 서두를 붙임(지시 준수 불완전) — 프롬프트 보정으로 완화했으나 완전 해결은 아님

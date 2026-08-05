@@ -33,7 +33,9 @@ services:
     # 받을 필요 없음. 다른 모델로 바꾸려면 infra/ollama/Dockerfile을 다시 빌드해 push.
     image: popopododo/inheritors-ollama:latest
     ports:
-      - "11434:11434"
+      # 127.0.0.1로 루프백에만 바인딩 — 0.0.0.0으로 열면 nginx(infra/nginx/ollama.conf)를
+      # 거치지 않고 누구나 <EC2 IP>:11434로 바로 붙어 무료로 LLM을 돌릴 수 있게 된다.
+      - "127.0.0.1:11434:11434"
     volumes:
       - ollama_models:/root/.ollama
 
