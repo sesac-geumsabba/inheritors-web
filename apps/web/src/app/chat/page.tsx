@@ -62,9 +62,23 @@ export default function ChatPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const sessionIdRef = useRef<number | null>(null);
   const scrollAnchorRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  // 토큰이 올 때마다 messages가 바뀌어서 매번 무조건 바닥으로 스크롤하면, 답변이 스트리밍되는
+  // 동안 위로 스크롤해서 이전 대화를 보려고 해도 계속 아래로 끌려 내려간다 — 사용자가 이미
+  // 바닥 근처에 있을 때만("따라가기" 중일 때만) 자동 스크롤하도록 추적한다.
+  const isNearBottomRef = useRef(true);
+
+  function handleScroll() {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    isNearBottomRef.current = distanceFromBottom < 120;
+  }
 
   useEffect(() => {
-    scrollAnchorRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (isNearBottomRef.current) {
+      scrollAnchorRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   function updateMessage(id: string, update: Partial<ChatMessage> | ((m: ChatMessage) => ChatMessage)) {
@@ -117,6 +131,7 @@ export default function ChatPage() {
     if (!query.trim() || isStreaming) return;
 
     const botMsgId = `a-${Date.now()}`;
+    isNearBottomRef.current = true; // 내가 직접 보낸 메시지는 항상 화면에 따라와야 함
     setMessages((prev) => [
       ...prev,
       { id: `u-${Date.now()}`, role: "user", content: query },
@@ -146,6 +161,7 @@ export default function ChatPage() {
     updateMessage(sourceMsgId, { awaitingContinueId: undefined });
 
     const botMsgId = `a-${Date.now()}`;
+    isNearBottomRef.current = true; // "네, 더 설명해주세요" 클릭도 내 액션이니 따라가기 재개
     setMessages((prev) => [
       ...prev,
       { id: `u-${Date.now()}`, role: "user", content: "네" },
@@ -177,7 +193,11 @@ export default function ChatPage() {
 
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col overflow-hidden pb-[84px] pt-16 md:my-8 md:rounded-2xl md:border md:border-outline-variant md:pb-0 md:pt-0 md:shadow-lg">
         {/* Viewing Area (Top) - Chat History */}
-        <div className="no-scrollbar flex-1 space-y-6 overflow-y-auto bg-background px-margin-mobile py-6">
+        <div
+          ref={scrollContainerRef}
+          onScroll={handleScroll}
+          className="no-scrollbar flex-1 space-y-6 overflow-y-auto bg-background px-margin-mobile py-6"
+        >
           <div className="flex justify-center">
             <span className="rounded-full bg-surface-container-high px-4 py-1 text-label-lg font-label-lg text-on-surface-variant opacity-80 shadow-sm">
               법률 상담 시작
