@@ -2,15 +2,15 @@ import asyncio
 import json
 from collections.abc import Iterator
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.chat import ChatRequest
+from app.chat import ChatRequest, ContinueRequest
 from app.db import get_db
 from app.mcp_client import KoreanLawMCPClient
-from packages.rag.chains import stream_answer
+from packages.rag.chains import continue_answer, stream_answer
 from packages.rag.embeddings import embed_query
 from packages.rag.retriever import RetrievedChunk, to_vector_literal
 
@@ -30,6 +30,13 @@ _LAW_KEYWORDS = ["법", "조문", "신탁", "상속", "증여", "유류분"]
 # 여러 단어 AND가 오히려 정확도를 높여서 그대로 둠.
 _LAW_SEARCH_TERMS = ["신탁", "상속", "증여", "유류분", "수익자", "위탁자"]
 _PRECEDENT_SEARCH_TERMS = _LAW_SEARCH_TERMS + ["판례", "대법원", "지방법원"]
+
+# ponytail: 답변을 한 번에 다 쏟아내면 채팅창에서 읽기 피로도가 커서, 문장이 끝나는 시점(마침표)에
+# 한 번 멈추고 "네, 더 설명해주세요"로 이어보게 한다. LLM 생성 자체를 여기서 끊기 때문에(for
+# 루프를 break) 뒤에 남은 긴 인용 블록까지 기다릴 필요가 없어 응답이 훨씬 빨리 끝난다.
+# 값 근거는 없음(감으로 정함) — 실사용 피드백 쌓이면 조정.
+PAGE_CHAR_LIMIT = 400
+_SENTENCE_END = (".", "!", "?")
 
 
 def _build_mcp_query(query: str, terms: list[str], max_terms: int | None = None) -> str:
@@ -98,6 +105,68 @@ def _save_external_sources(db: Session, message_id: int, sources: list[dict]) ->
     db.commit()
 
 
+def _load_context_for_continue(db: Session, message_id: int) -> tuple[int, str, str, list[RetrievedChunk], list[dict]]:
+    """이어쓰기 대상 메시지에서 (session_id, 원 질문, 이전 답변, 내부 청크, 외부 출처)를 복원.
+
+    재검색하지 않고 message_sources에 이미 저장된 근거를 그대로 재사용한다 — 검색은 원 질문
+    시점의 것과 동일해야 "이어지는" 답변이 되고, 새로 검색하면 다른 결과가 섞일 수 있다.
+    """
+    row = db.execute(
+        text("SELECT session_id, content FROM chat_messages WHERE id = :id AND role = 'assistant'"),
+        {"id": message_id},
+    ).first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="message not found")
+    session_id, previous_answer = row
+
+    user_row = db.execute(
+        text(
+            "SELECT content FROM chat_messages "
+            "WHERE session_id = :sid AND role = 'user' AND id < :mid "
+            "ORDER BY id DESC LIMIT 1"
+        ),
+        {"sid": session_id, "mid": message_id},
+    ).first()
+    query = user_row[0] if user_row else ""
+
+    chunk_rows = db.execute(
+        text(
+            "SELECT c.id, c.document_id, c.content, c.page, d.file_name, d.category, d.bank, d.contract_type "
+            "FROM message_sources ms "
+            "JOIN chunks c ON c.id = ms.chunk_id "
+            "JOIN documents d ON d.id = c.document_id "
+            "WHERE ms.message_id = :mid AND ms.source_type = 'internal_chunk' "
+            "ORDER BY ms.rank"
+        ),
+        {"mid": message_id},
+    ).all()
+    chunks = [
+        RetrievedChunk(
+            chunk_id=r.id,
+            document_id=r.document_id,
+            content=r.content,
+            page=r.page,
+            file_name=r.file_name,
+            category=r.category,
+            bank=r.bank,
+            contract_type=r.contract_type,
+            score=1.0,
+        )
+        for r in chunk_rows
+    ]
+
+    external_rows = db.execute(
+        text(
+            "SELECT source_type, title, url, snippet, score FROM message_sources "
+            "WHERE message_id = :mid AND source_type != 'internal_chunk' ORDER BY rank"
+        ),
+        {"mid": message_id},
+    ).all()
+    external_sources = [dict(r._mapping) for r in external_rows]
+
+    return session_id, query, previous_answer, chunks, external_sources
+
+
 async def _fetch_external_sources(query: str) -> list[dict]:
     """판례/법령 관련 질의로 보이면 korean-law-mcp를 병렬 호출. 관련 없어 보이면 스킵."""
     is_precedent = any(k in query for k in _PRECEDENT_KEYWORDS)
@@ -122,6 +191,82 @@ async def _fetch_external_sources(query: str) -> list[dict]:
     return sources
 
 
+def _sse_sources(chunks: list[RetrievedChunk], external_sources: list[dict]) -> list[dict]:
+    return [
+        {
+            "source_type": "internal_chunk",
+            "title": c.file_name,
+            "page": c.page,
+            "url": None,
+            "score": round(c.score, 3),
+            "snippet": c.content[:120],
+        }
+        for c in chunks
+    ] + [
+        {
+            "source_type": s["source_type"],
+            "title": s.get("title", ""),
+            "page": None,
+            "url": s.get("url") or None,
+            "score": s.get("score"),
+            "snippet": s.get("snippet", "")[:200],
+        }
+        for s in external_sources
+    ]
+
+
+def _event_stream(
+    db: Session,
+    session_id: int,
+    tokens: Iterator[str],
+    chunks: list[RetrievedChunk],
+    external_sources: list[dict],
+    emit_sources: bool,
+) -> Iterator[str]:
+    """토큰을 SSE로 흘려보내다 문장이 끝나는 시점에 budget을 넘기면 생성을 끊고
+    "더 설명해드릴까요?"를 붙인 뒤 이어쓰기용 event를 보낸다. /chat, /chat/continue가 공유.
+    """
+    if emit_sources:
+        sse_sources = _sse_sources(chunks, external_sources)
+        yield f"event: sources\ndata: {json.dumps(sse_sources, ensure_ascii=False)}\n\n"
+
+    parts: list[str] = []
+    paused_early = False
+    try:
+        for token in tokens:
+            parts.append(token)
+            # SSE는 data 라인 안에 개행이 오면 각 줄마다 "data: "를 다시 붙여야 한다.
+            yield "data: " + token.replace("\n", "\ndata: ") + "\n\n"
+            shown = "".join(parts)
+            if len(shown) >= PAGE_CHAR_LIMIT and shown.rstrip().endswith(_SENTENCE_END):
+                paused_early = True
+                break  # LLM 생성 자체를 여기서 그만 받는다 — 뒤에 남은 긴 인용 블록을 기다리지 않음
+    except Exception as e:
+        # Ollama 연결 끊김/모델 미존재 등으로 스트림 중간에 예외가 나면 그대로 두면
+        # 응답이 끝맺음 없이 끊겨 브라우저에 ERR_INCOMPLETE_CHUNKED_ENCODING이 뜬다.
+        # 여기서 잡아 안내 메시지로 스트림을 정상 종료한다.
+        print(f"[error] LLM 스트리밍 실패: {e}")
+        fallback = "죄송합니다, 답변 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
+        parts = [fallback]
+        yield "data: " + fallback + "\n\n"
+
+    if paused_early:
+        followup = "\n\n더 설명해드릴까요?"
+        parts.append(followup)
+        yield "data: " + followup.replace("\n", "\ndata: ") + "\n\n"
+
+    content = "".join(parts)
+    message_id = _save_message(db, session_id, "assistant", content, None)
+    # sources는 항상 저장한다 (emit_sources=False라도) — 이 답변이 또 "더 설명해드릴까요?"로
+    # 끊겨서 재이어쓰기 대상이 될 수 있고, 그때 _load_context_for_continue가 이 message_sources를
+    # 그대로 읽어 근거를 복원한다. SSE로 sources 카드를 다시 보여줄지만 emit_sources로 가른다.
+    _save_internal_sources(db, message_id, chunks)
+    _save_external_sources(db, message_id, external_sources)
+    if paused_early:
+        yield f"event: awaiting_continue\ndata: {{\"message_id\": {message_id}}}\n\n"
+    yield f"event: done\ndata: {{\"session_id\": {session_id}}}\n\n"
+
+
 @router.post("")
 async def chat(req: ChatRequest, db: Session = Depends(get_db)) -> StreamingResponse:
     session_id = req.session_id or _create_session(db)
@@ -141,39 +286,16 @@ async def chat(req: ChatRequest, db: Session = Depends(get_db)) -> StreamingResp
         skip_internal=is_precedent_only,
     )
 
-    def event_stream() -> Iterator[str]:
-        sse_sources = [
-            {
-                "source_type": "internal_chunk",
-                "title": c.file_name,
-                "page": c.page,
-                "url": None,
-                "score": round(c.score, 3),
-                "snippet": c.content[:120],
-            }
-            for c in chunks
-        ] + [
-            {
-                "source_type": s["source_type"],
-                "title": s.get("title", ""),
-                "page": None,
-                "url": s.get("url") or None,
-                "score": s.get("score"),
-                "snippet": s.get("snippet", "")[:200],
-            }
-            for s in external_sources
-        ]
-        yield f"event: sources\ndata: {json.dumps(sse_sources, ensure_ascii=False)}\n\n"
+    stream = _event_stream(db, session_id, tokens, chunks, external_sources, emit_sources=True)
+    return StreamingResponse(stream, media_type="text/event-stream")
 
-        parts: list[str] = []
-        for token in tokens:
-            parts.append(token)
-            # SSE는 data 라인 안에 개행이 오면 각 줄마다 "data: "를 다시 붙여야 한다.
-            yield "data: " + token.replace("\n", "\ndata: ") + "\n\n"
 
-        message_id = _save_message(db, session_id, "assistant", "".join(parts), None)
-        _save_internal_sources(db, message_id, chunks)
-        _save_external_sources(db, message_id, external_sources)
-        yield f"event: done\ndata: {{\"session_id\": {session_id}}}\n\n"
-
-    return StreamingResponse(event_stream(), media_type="text/event-stream")
+@router.post("/continue")
+def chat_continue(req: ContinueRequest, db: Session = Depends(get_db)) -> StreamingResponse:
+    """"더 설명해드릴까요?"에 "네"로 답했을 때 이어쓰기 — 재검색 없이 원래 근거로 이어서 생성."""
+    session_id, query, previous_answer, chunks, external_sources = _load_context_for_continue(
+        db, req.message_id
+    )
+    tokens = continue_answer(query, previous_answer, chunks, external_sources)
+    stream = _event_stream(db, session_id, tokens, chunks, external_sources, emit_sources=False)
+    return StreamingResponse(stream, media_type="text/event-stream")
