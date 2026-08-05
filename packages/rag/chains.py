@@ -107,6 +107,7 @@ def stream_answer(
     query_embedding: list[float],
     per_category_k: int = PER_CATEGORY_TOP_K,
     external_sources: list[dict] | None = None,
+    skip_internal: bool = False,
 ) -> tuple[Iterator[str], list[RetrievedChunk]]:
     """답변 토큰 스트림과, message_sources 기록용으로 실제 인용된 내부 청크 목록을 함께 반환.
 
@@ -119,13 +120,20 @@ def stream_answer(
     전역 top-k면 질의와 제일 가까운 카테고리 하나가 결과를 독식해서 다른 성격의 근거가
     밀려날 수 있음. 계약서 관련 질의는 은행명/신탁유형이 감지되면 벡터 검색에 메타데이터
     필터를 결합해 "하나은행 계약서에서는?" 같은 질문에 정확히 대응한다.
+
+    skip_internal=True면 내부 문서 검색 자체를 안 함 — 순수 판례 질의는 내부 DB(신탁 상품
+    설명서/계약서)에 실제 판례 원문이 없어서, 의미상 비슷해 보이는(예: "유류분" 언급) 상품
+    안내 문구가 판례 대신 인용되는 오답 유발 가능 (chat_router에서 판단해 전달).
     """
-    bank = detect_bank(query)
-    contract_type = detect_contract_type(query)
-    chunks = search_chunks_balanced(
-        db, query_embedding, per_category_k=per_category_k, bank=bank, contract_type=contract_type
-    )
     external_sources = external_sources or []
+    if skip_internal:
+        chunks: list[RetrievedChunk] = []
+    else:
+        bank = detect_bank(query)
+        contract_type = detect_contract_type(query)
+        chunks = search_chunks_balanced(
+            db, query_embedding, per_category_k=per_category_k, bank=bank, contract_type=contract_type
+        )
 
     has_internal = bool(chunks) and chunks[0].score >= NO_CONTEXT_THRESHOLD
     if not has_internal and not external_sources:

@@ -129,7 +129,17 @@ async def chat(req: ChatRequest, db: Session = Depends(get_db)) -> StreamingResp
     _save_message(db, session_id, "user", req.message, query_embedding)
 
     external_sources = await _fetch_external_sources(req.message)
-    tokens, chunks = stream_answer(db, req.message, query_embedding, external_sources=external_sources)
+    # ponytail: 판례 질의는 내부 DB(신탁 상품설명서/계약서)에 판례 원문이 없어서 검색해봐야
+    # "유류분" 등 비슷한 단어가 들어간 상품 안내 문구만 걸림 — MCP 실제 판례를 우선하고
+    # 내부 검색은 스킵. 신탁 상품/법령 질의는 기존대로 내부 문서를 계속 사용.
+    is_precedent_only = any(k in req.message for k in _PRECEDENT_KEYWORDS)
+    tokens, chunks = stream_answer(
+        db,
+        req.message,
+        query_embedding,
+        external_sources=external_sources,
+        skip_internal=is_precedent_only,
+    )
 
     def event_stream() -> Iterator[str]:
         sse_sources = [
