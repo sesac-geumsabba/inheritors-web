@@ -1,8 +1,11 @@
 import asyncio
 import json
 import os
+import re
 import subprocess
 from typing import Any, Dict, List, Optional
+
+_DECISION_ID_RE = re.compile(r"\[(\d+)\]")
 
 
 def _resolve_script_path() -> str:
@@ -181,8 +184,26 @@ class KoreanLawMCPClient:
             })
         return sources or [{"source_type": "statute", "title": query, "url": "", "snippet": "관련 법령을 찾을 수 없습니다.", "score": 0.0, "rank": 1}]
 
+    async def get_decision_text(
+        self, domain: str, decision_id: str, full: bool = False, timeout: float = 3.0
+    ) -> str:
+        """특정 사건의 본문(판시사항/판결요지 등)을 조회 — search_decisions 결과에서 얻은 id로 호출."""
+        resp = await self._call_tool(
+            "get_decision_text", {"domain": domain, "id": decision_id, "full": full}, timeout=timeout
+        )
+        if "error" in resp:
+            return ""
+        result = resp.get("result", {})
+        content = result.get("content", [])
+        return "\n".join(item.get("text", "") for item in content)
+
     async def search_decisions(self, query: str, domain: str = "precedent", timeout: float = 3.0) -> List[Dict[str, Any]]:
-        """Search court precedents using korean-law-mcp."""
+        """Search court precedents using korean-law-mcp.
+
+        검색 결과 자체는 사건번호/법원/선고일 같은 서지사항 목록일 뿐이라 "왜 그렇게 판결났는지"를
+        설명할 내용이 없다 — 최상위 1건만 get_decision_text로 판시사항/판결요지까지 받아와
+        스니펫을 그걸로 교체한다(전부 받으면 호출이 늘어나 느려지니 상위 1건만).
+        """
         resp = await self._call_tool("search_decisions", {"query": query, "domain": domain}, timeout=timeout)
         if "error" in resp:
             return [{"source_type": "case_law", "title": query, "url": "", "snippet": f"판례 검색 중 오류 발생 또는 타임아웃: {resp.get('message')}", "score": 0.0, "rank": 1}]
@@ -192,11 +213,18 @@ class KoreanLawMCPClient:
         sources = []
         for i, item in enumerate(content, 1):
             text = item.get("text", "")
+            snippet = text[:500]
+            if i == 1:
+                match = _DECISION_ID_RE.search(text)
+                if match:
+                    detail = await self.get_decision_text(domain, match.group(1), timeout=timeout)
+                    if detail:
+                        snippet = detail[:1500]
             sources.append({
                 "source_type": "case_law",
                 "title": f"판례 검색: {query}",
                 "url": "https://glaw.scourt.go.kr",
-                "snippet": text[:500],
+                "snippet": snippet,
                 "score": round(1.0 - (i * 0.1), 2),
                 "rank": i,
             })
