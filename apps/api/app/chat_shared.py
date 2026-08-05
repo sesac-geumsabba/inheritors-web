@@ -7,6 +7,7 @@ stream_answer/continue_answer를 어디서 가져오느냐뿐이고, 검색/저�
 
 import asyncio
 import json
+import re
 from collections.abc import Iterator
 
 from fastapi import HTTPException
@@ -28,7 +29,32 @@ _LAW_KEYWORDS = ["법", "조문", "신탁", "상속", "증여", "유류분"]
 # (실측: "신탁 유류분"도 실패) 첫 매칭어 하나만 사용 — search_decisions(판례 전문검색)는
 # 여러 단어 AND가 오히려 정확도를 높여서 그대로 둠.
 _LAW_SEARCH_TERMS = ["신탁", "상속", "증여", "유류분", "수익자", "위탁자"]
-_PRECEDENT_SEARCH_TERMS = _LAW_SEARCH_TERMS + ["판례", "대법원", "지방법원"]
+# "판례"/"대법원"/"지방법원"은 판례 여부 분류·정확도 보정용 보조어일 뿐 그 자체로는 검색
+# 주제가 아니다 — 아래 매칭이 이 보조어만 걸리면(=신탁/상속 밖 질의) _extract_keywords로
+# 넘어가야 한다("부동산 재건축 판례" 같은 질의에서 "판례"만 남으면 검색이 무의미해짐, 실측 확인).
+_PRECEDENT_BOOST_TERMS = ["판례", "대법원", "지방법원"]
+_PRECEDENT_SEARCH_TERMS = _LAW_SEARCH_TERMS + _PRECEDENT_BOOST_TERMS
+
+# ponytail: 신탁/상속 도메인 밖 질의(예: "부동산 재건축 판례")는 위 고정 어휘 목록에 하나도
+# 안 걸려서 자연어 원문이 그대로 MCP에 넘어가는데, 법제처 API가 공백 단어를 AND로 묶어
+# 대부분 0건이 된다(실측 확인) — 조사/군더더기를 떼고 실제 명사만 남겨서 재시도한다.
+# 형태소 분석기 없이 정규식으로 흔한 조사만 떼는 수준이라 완벽하지 않음 — 검색이 계속
+# 빗나가면 KoNLPy 등 형태소 분석기 도입 검토.
+_QUERY_STOPWORDS = {
+    "관련", "대해서", "대해", "대한", "설명해줘", "설명해주세요", "알려줘", "알려주세요",
+    "궁금해요", "궁금합니다", "무엇인가요", "무엇", "어떻게", "되나요", "인가요", "좀", "혹시",
+    "판례", "판결", "사건", "대법원", "지방법원", "법령",
+}
+_TRAILING_PARTICLE_RE = re.compile(r"(은|는|이|가|을|를|의|에|에서|으로|로|와|과|도|만)$")
+
+
+def _extract_keywords(query: str, max_terms: int = 3) -> str:
+    keywords = []
+    for word in query.split():
+        cleaned = _TRAILING_PARTICLE_RE.sub("", word)
+        if cleaned and cleaned not in _QUERY_STOPWORDS and len(cleaned) > 1:
+            keywords.append(cleaned)
+    return " ".join(keywords[:max_terms])
 
 # ponytail: 답변을 한 번에 다 쏟아내면 채팅창에서 읽기 피로도가 커서, 문장이 끝나는 시점(마침표)에
 # 한 번 멈추고 "네, 더 설명해주세요"로 이어보게 한다. LLM 생성 자체를 여기서 끊기 때문에(for
@@ -44,7 +70,12 @@ def is_precedent_only(query: str) -> bool:
 
 def _build_mcp_query(query: str, terms: list[str], max_terms: int | None = None) -> str:
     matched = [t for t in terms if t in query]
-    return " ".join(matched[:max_terms] if max_terms else matched) if matched else query
+    # 실제 주제어(신탁/상속/증여 등)는 하나도 안 걸리고 "판례" 같은 보조어만 걸렸으면
+    # 그 보조어 하나로는 검색이 무의미하니 일반 키워드 추출로 넘어간다.
+    domain_matched = [t for t in matched if t not in _PRECEDENT_BOOST_TERMS]
+    if not domain_matched:
+        return _extract_keywords(query) or query
+    return " ".join(matched[:max_terms] if max_terms else matched)
 
 
 def create_session(db: Session) -> int:
