@@ -1,3 +1,4 @@
+import FontScaleProvider from "@/components/FontScaleProvider";
 import OnboardingProvider from "@/components/OnboardingModal";
 import "./globals.css";
 
@@ -21,7 +22,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="antialiased">
-        <OnboardingProvider>{children}</OnboardingProvider>
+        <FontScaleProvider>
+          <OnboardingProvider>{children}</OnboardingProvider>
+        </FontScaleProvider>
       </body>
     </html>
   );

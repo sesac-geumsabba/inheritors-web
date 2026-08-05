@@ -72,15 +72,31 @@ module.exports = {
         "headline-sm": ["Noto Sans KR"],
         "label-lg": ["Noto Sans KR"],
       },
+      // FN-SUPP-02: 헤더의 글자 크기 버튼(100/125/150%)이 FontScaleProvider를 통해
+      // <html>에 --font-scale CSS 변수를 설정하면, 여기서 쓰는 디자인 시스템 폰트 크기가
+      // 전부 calc()로 같이 커진다 — 값 자체는 px 고정(디자인 스펙)이라 rem 트릭이 안 통해서
+      // 이 방식을 씀. var(...,1) 폴백은 JS 로드 전(SSR)에도 100%로 정상 렌더되게 해줌.
       fontSize: {
-        "body-lg": ["20px", { lineHeight: "32px", fontWeight: "500" }],
-        "headline-md": ["28px", { lineHeight: "40px", fontWeight: "700" }],
-        "body-md": ["18px", { lineHeight: "28px", fontWeight: "400" }],
-        "label-lg": [
-          "16px",
-          { lineHeight: "24px", letterSpacing: "0.5px", fontWeight: "700" },
+        "body-lg": [
+          "calc(20px * var(--font-scale, 1))",
+          { lineHeight: "calc(32px * var(--font-scale, 1))", fontWeight: "500" },
         ],
-        "headline-sm": ["24px", { lineHeight: "34px", fontWeight: "700" }],
+        "headline-md": [
+          "calc(28px * var(--font-scale, 1))",
+          { lineHeight: "calc(40px * var(--font-scale, 1))", fontWeight: "700" },
+        ],
+        "body-md": [
+          "calc(18px * var(--font-scale, 1))",
+          { lineHeight: "calc(28px * var(--font-scale, 1))", fontWeight: "400" },
+        ],
+        "label-lg": [
+          "calc(16px * var(--font-scale, 1))",
+          { lineHeight: "calc(24px * var(--font-scale, 1))", letterSpacing: "0.5px", fontWeight: "700" },
+        ],
+        "headline-sm": [
+          "calc(24px * var(--font-scale, 1))",
+          { lineHeight: "calc(34px * var(--font-scale, 1))", fontWeight: "700" },
+        ],
       },
     },
   },
