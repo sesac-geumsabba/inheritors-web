@@ -55,6 +55,8 @@ module.exports = {
         "on-primary-container": "#fffbff",
         "on-surface-variant": "#5b403a",
         "primary-container": "#d83913",
+        "brand-pink": "#F52D81",
+        "brand-pink-light": "#FDE8F0",
       },
       borderRadius: {
         DEFAULT: "0.25rem",
@@ -64,6 +66,10 @@ module.exports = {
       },
       spacing: {
         "margin-mobile": "20px",
+        "container-padding": "24px",
+        gutter: "16px",
+        "stack-gap-md": "20px",
+        "touch-target-min": "56px",
       },
       fontFamily: {
         "body-lg": ["Noto Sans KR"],
