@@ -9,7 +9,13 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_ollama import ChatOllama
 from sqlalchemy.orm import Session
 
-from packages.rag.retriever import DEFAULT_TOP_K, RetrievedChunk, search_chunks
+from packages.rag.retriever import (
+    PER_CATEGORY_TOP_K,
+    RetrievedChunk,
+    detect_bank,
+    detect_contract_type,
+    search_chunks_balanced,
+)
 
 # ponytail: 설명서/계약서/상속증여세 3카테고리 + 경계(금융이지만 무관)/완전무관 질의 11개로 보정.
 # 관련 질의 top-1 최소 0.621, 무관·경계 질의 top-1 최대 0.442 — 그 사이 값으로 마진 확보.
@@ -99,7 +105,7 @@ def stream_answer(
     db: Session,
     query: str,
     query_embedding: list[float],
-    top_k: int = DEFAULT_TOP_K,
+    per_category_k: int = PER_CATEGORY_TOP_K,
     external_sources: list[dict] | None = None,
     skip_internal: bool = False,
 ) -> tuple[Iterator[str], list[RetrievedChunk]]:
@@ -109,12 +115,25 @@ def stream_answer(
     (같은 질의를 두 번 임베딩하지 않기 위해).
     external_sources는 packages/legal-mcp 등에서 가져온 판례/법령 결과
     ({source_type, title, url, snippet, score, rank} dict 리스트, chat_router에서 조립).
+
+    내부 검색은 설명서/상속증여세/계약서 카테고리별로 top-k를 따로 조회해 합친다 — 단일
+    전역 top-k면 질의와 제일 가까운 카테고리 하나가 결과를 독식해서 다른 성격의 근거가
+    밀려날 수 있음. 계약서 관련 질의는 은행명/신탁유형이 감지되면 벡터 검색에 메타데이터
+    필터를 결합해 "하나은행 계약서에서는?" 같은 질문에 정확히 대응한다.
+
     skip_internal=True면 내부 문서 검색 자체를 안 함 — 순수 판례 질의는 내부 DB(신탁 상품
     설명서/계약서)에 실제 판례 원문이 없어서, 의미상 비슷해 보이는(예: "유류분" 언급) 상품
     안내 문구가 판례 대신 인용되는 오답 유발 가능 (chat_router에서 판단해 전달).
     """
     external_sources = external_sources or []
-    chunks = [] if skip_internal else search_chunks(db, query_embedding, top_k)
+    if skip_internal:
+        chunks: list[RetrievedChunk] = []
+    else:
+        bank = detect_bank(query)
+        contract_type = detect_contract_type(query)
+        chunks = search_chunks_balanced(
+            db, query_embedding, per_category_k=per_category_k, bank=bank, contract_type=contract_type
+        )
 
     has_internal = bool(chunks) and chunks[0].score >= NO_CONTEXT_THRESHOLD
     if not has_internal and not external_sources:
