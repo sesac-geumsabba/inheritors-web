@@ -3,12 +3,18 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
-const TABS = [
+interface TabItem {
+  href: string | null;
+  label: string;
+  icon: string;
+}
+
+const TABS: readonly TabItem[] = [
   { href: "/prototype/start", label: "내 정보", icon: "person" },
   { href: "/chat", label: "챗봇", icon: "chat" },
   { href: "/prototype/report", label: "리포트", icon: "description" },
   { href: "action:back", label: "뒤로가기", icon: "arrow_back" },
-] as const;
+];
 
 export default function BottomNavBar() {
   const pathname = usePathname();
@@ -46,11 +52,15 @@ export default function BottomNavBar() {
           );
         }
 
-        return tab.href ? (
-          <Link key={tab.label} href={tab.href} className={className}>
-            {content}
-          </Link>
-        ) : (
+        if (tab.href) {
+          return (
+            <Link key={tab.label} href={tab.href} className={className}>
+              {content}
+            </Link>
+          );
+        }
+
+        return (
           <button key={tab.label} type="button" className={className}>
             {content}
           </button>
