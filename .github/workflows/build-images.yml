@@ -10,7 +10,10 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # EC2가 arm64(Graviton/t4g)라 arm64 이미지가 필요하다. amd64 러너 + QEMU 크로스빌드는
+    # npm ci/next build 같은 네이티브 작업이 에뮬레이션 때문에 극심하게 느려서(실측 8분+ 도
+    # 안 끝남), GitHub가 제공하는 네이티브 arm64 hosted 러너를 바로 쓴다.
+    runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
       packages: write
@@ -31,12 +34,6 @@ jobs:
       - name: 버전 태그 계산
         id: version
         run: echo "tag=${{ github.run_number }}-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
-
-      # EC2가 arm64(Graviton/t4g)라 GH runner(amd64) 네이티브로는 못 실행하는 아키텍처의
-      # 이미지를 만들어야 한다 — QEMU로 크로스빌드.
-      - uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
 
       - uses: docker/setup-buildx-action@v3
 
