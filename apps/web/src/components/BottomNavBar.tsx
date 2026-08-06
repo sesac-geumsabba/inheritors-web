@@ -4,10 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 // ponytail: 목업(docs/design/_1)은 "내 정보/챗봇/리포트/뒤로가기" 4탭이지만, "뒤로가기"를
-// 하단 고정 탭으로 두는 건 일반적인 내비게이션 의미와 어긋나서 빼고, 기존 "오늘의 배움"
 // 자리는 그대로 두고 "복습하기"(미구현 placeholder)만 새로 실제 라우트가 된 "리포트"로 교체.
 const TABS = [
-  { href: "/prototype/start", label: "오늘의 배움", icon: "school" },
   { href: "/report", label: "리포트", icon: "description" },
   { href: "/chat", label: "챗봇", icon: "chat_bubble" },
   { href: null, label: "내 정보", icon: "person" },
