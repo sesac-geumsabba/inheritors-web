@@ -1,0 +1,239 @@
+<!DOCTYPE html><html class="light" lang="ko" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>상속자들 - 챗봇</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;700&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-fixed-dim": "#d5c1c9",
+                        "tertiary-container": "#807077",
+                        "surface-container-high": "#eae7e7",
+                        "on-error-container": "#93000a",
+                        "on-primary-fixed": "#3f001b",
+                        "on-primary-fixed-variant": "#8f0045",
+                        "on-surface": "#1c1b1b",
+                        "background": "#fcf9f8",
+                        "outline": "#8e6f76",
+                        "secondary-container": "#fe9d00",
+                        "primary-container": "#e01572",
+                        "surface-variant": "#e5e2e1",
+                        "on-secondary-container": "#663c00",
+                        "on-secondary": "#ffffff",
+                        "primary-fixed": "#ffd9e1",
+                        "on-secondary-fixed": "#2c1700",
+                        "surface-container": "#f0eded",
+                        "on-surface-variant": "#5a3f46",
+                        "inverse-surface": "#313030",
+                        "on-error": "#ffffff",
+                        "surface": "#fcf9f8",
+                        "surface-dim": "#dcd9d9",
+                        "primary-fixed-dim": "#ffb1c5",
+                        "tertiary": "#67585f",
+                        "secondary-fixed": "#ffdcbb",
+                        "inverse-on-surface": "#f3f0ef",
+                        "surface-container-highest": "#e5e2e1",
+                        "primary": "#b6005a",
+                        "on-tertiary-fixed": "#23181e",
+                        "secondary-fixed-dim": "#ffb869",
+                        "on-tertiary-fixed-variant": "#514349",
+                        "on-secondary-fixed-variant": "#673d00",
+                        "secondary": "#885200",
+                        "error-container": "#ffdad6",
+                        "surface-container-low": "#f6f3f2",
+                        "on-background": "#1c1b1b",
+                        "surface-bright": "#fcf9f8",
+                        "inverse-primary": "#ffb1c5",
+                        "on-primary-container": "#fffbff",
+                        "outline-variant": "#e2bdc5",
+                        "error": "#ba1a1a",
+                        "surface-tint": "#ba005c",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-fixed": "#f2dde5",
+                        "on-primary": "#ffffff",
+                        "on-tertiary-container": "#fffbff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-gap-lg": "32px",
+                        "stack-gap-md": "20px",
+                        "base": "8px",
+                        "gutter": "16px",
+                        "container-padding": "24px",
+                        "touch-target-min": "56px"
+                    },
+                    "fontFamily": {
+                        "headline-lg-mobile": ["Be Vietnam Pro"],
+                        "headline-md": ["Be Vietnam Pro"],
+                        "label-lg": ["Noto Sans KR"],
+                        "body-lg": ["Noto Sans KR"],
+                        "headline-lg": ["Be Vietnam Pro"],
+                        "label-sm": ["Noto Sans KR"],
+                        "body-md": ["Noto Sans KR"]
+                    },
+                    "fontSize": {
+                        "headline-lg-mobile": ["28px", { "lineHeight": "38px", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "34px", "fontWeight": "700" }],
+                        "label-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "0.02em", "fontWeight": "700" }],
+                        "body-lg": ["20px", { "lineHeight": "30px", "fontWeight": "500" }],
+                        "headline-lg": ["32px", { "lineHeight": "44px", "fontWeight": "700" }],
+                        "label-sm": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "body-md": ["18px", { "lineHeight": "28px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Ensure the input area stays above the bottom nav */
+        .chat-container {
+            height: calc(100vh - 56px - 72px); /* 100vh - TopAppBar height - BottomNavBar height */
+            padding-bottom: 80px; /* Space for the input area */
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body-md antialiased overflow-hidden flex flex-col h-screen md:items-center">
+<!-- Mobile Wrapper -->
+<div class="w-full h-full max-w-[720px] mx-auto bg-surface relative flex flex-col shadow-none md:shadow-lg md:border md:border-outline-variant">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center w-full px-container-padding h-touch-target-min border-b border-outline-variant bg-surface shrink-0 z-10">
+<div class="flex items-center gap-4">
+<button aria-label="Menu" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-variant transition-colors opacity-80 hover:scale-95 duration-150 text-on-surface-variant">
+<span class="material-symbols-outlined text-[28px]">menu</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-bold text-primary-container">상속자들</h1>
+</div>
+<div class="flex items-center gap-2">
+<button class="h-10 px-3 rounded border border-outline-variant flex items-center justify-center hover:bg-surface-variant transition-colors font-label-sm text-label-sm text-on-surface">
+                    +글자 크게
+                </button>
+<button class="h-10 px-3 rounded border border-outline-variant flex items-center justify-center hover:bg-surface-variant transition-colors font-label-sm text-label-sm text-on-surface">
+                    -글자 작게
+                </button>
+</div>
+</header>
+<!-- Chat Content Area -->
+<main class="chat-container overflow-y-auto px-container-padding pt-stack-gap-md flex flex-col gap-6 relative flex-1 bg-surface-container-lowest scroll-smooth">
+<!-- Bot Message -->
+<div class="flex items-start gap-3 w-full max-w-[90%]">
+<div class="w-10 h-10 rounded-full bg-surface-variant flex-shrink-0 flex items-center justify-center overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A cute, friendly 3D rendered mascot character named Neuri, looking approachable and helpful, set against a soft white background with warm lighting, perfect for a senior-friendly app." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCrGft8CohQhylCbrlOxpU4hyhorNkMh8IQq8NxSvNlLSJLJb-CRcCuFoMz4mgRkjxUwcMgHfpqYgiBT3xItUBUYKwglnqpz7heps2jgoW_so6cVh76TQ1zKRWIzKK0outyWnb1eMp_2Ij8ymT8U2TfAOdnMqMu4B29Md7XV4kCL3DyiXQgvqql547UHwBIuf6BYv9CIptAzYZ1WF3GNNL6HEVbyhxBvJX5ZU98fAqkap0KLLB3DwFlohkLPOiCbcpqxvY">
+</div>
+<div class="flex flex-col gap-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant">상속자들</span>
+<div class="bg-surface-container-high text-on-surface p-4 rounded-2xl rounded-tl-sm shadow-sm border border-outline-variant/30 font-body-md text-body-md">
+                        안녕하세요! 상속자들의 법률 도우미 챗봇 '상속자들'입니다.<br>
+                        어떤 도움이 필요하신가요? 아래 버튼을 누르시거나 직접 질문을 입력해주세요.
+                    </div>
+</div>
+</div>
+<!-- User Message -->
+<div class="flex items-end justify-end gap-3 w-full self-end"><button class="whitespace-nowrap px-4 py-1 rounded-full bg-surface-container-lowest text-[#f52d81] border border-[#f52d81] text-label-sm font-bold hover:bg-surface-variant transition-colors">판례 조회</button><button class="whitespace-nowrap px-4 py-1 rounded-full bg-surface-container-lowest text-[#f52d81] border border-[#f52d81] text-label-sm font-bold hover:bg-surface-variant transition-colors">신탁 내용 검색</button><button class="whitespace-nowrap px-4 py-1 rounded-full bg-surface-container-lowest text-[#f52d81] border border-[#f52d81] text-label-sm font-bold hover:bg-surface-variant transition-colors">맞춤 상담 신청</button></div>
+<!-- Bot Message with List -->
+<div class="flex items-end justify-end gap-3 w-full self-end">
+    <div class="flex flex-col gap-1 items-end max-w-[85%]">
+        <span class="font-label-sm text-label-sm text-on-surface-variant pr-1">나</span>
+        <div class="bg-surface-container text-on-surface p-4 rounded-2xl rounded-br-sm shadow-sm border border-outline-variant/30 font-body-md text-body-md">
+            유언대용신탁이 정확히 뭐야? 기존 유언장이랑 뭐가 달라?
+        </div>
+    </div>
+</div><div class="flex items-start gap-3 w-full max-w-[90%]">
+<div class="w-10 h-10 rounded-full bg-surface-variant flex-shrink-0 flex items-center justify-center overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A cute, friendly 3D rendered mascot character named Neuri, looking approachable and helpful, set against a soft white background with warm lighting, perfect for a senior-friendly app." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBQjRDsNuASPJiP81isvgisarXDz7Mfi797NGrXBnAKxvZ35bVc3LjOaTS7jZBBk8ONDLwPwRGLHy0MqjJdfoJ5EBGJ_Rf-HlE0F-XPbF3nSC0EYNVlhZYCqNnit_DhMqGXuxDcnkc7TEpQ0s_whzwqA0Jy9HfB8lrPaa8qNKk36_9Rz3YcGUti447s4r10ivPgbcXnQP9lP5NNyXGL13IsuRY9SFz6UiJx66MNhcvrXlLi2jfHUm4p33KeFRJbOZXcbzo">
+</div>
+<div class="flex flex-col gap-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant">상속자들</span>
+<div class="bg-surface-container-high text-on-surface p-4 rounded-2xl rounded-tl-sm shadow-sm border border-outline-variant/30 font-body-md text-body-md space-y-3">
+<p class="">유언대용신탁은 생전에는 본인이 재산을 관리하고, 사후에 지정된 수익자에게 재산이 이전되도록 하는 제도입니다.</p>
+<div>
+<strong class="font-bold text-on-surface">주요 차이점:</strong>
+<ol class="list-decimal pl-5 mt-2 space-y-2 text-on-surface-variant">
+<li class=""><strong>효력 발생 시점:</strong> 유언장은 사후에만 효력이 발생하지만, 신탁은 생전부터 관리 가능합니다.</li>
+<li class=""><strong>유연성:</strong> 치매 등 판단 능력이 저하될 경우를 대비해 재산 관리를 맡길 수 있습니다.</li>
+<li class=""><strong>절차:</strong> 유언 검인 절차 없이 신탁 계약에 따라 신속하게 처리됩니다.</li>
+</ol>
+</div>
+</div>
+</div>
+</div>
+<!-- Typing Indicator (Static) -->
+<div class="flex items-start gap-3 w-full max-w-[90%] pb-4">
+<div class="w-10 h-10 rounded-full bg-surface-variant flex-shrink-0 flex items-center justify-center overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A cute, friendly 3D rendered mascot character named Neuri, looking approachable and helpful, set against a soft white background with warm lighting, perfect for a senior-friendly app." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBD1ggcFQmPbJTSu2etKmbtXJEwsm1t9hJiZ09V1sZaz91VxOF-T6E1wwBu7lacWtOZ8LieuIAkNxXqtFjc24Pgz2sP1Ub87BdqrfFE7AxowYN1MZQGvdjS9wt--82NUNVfkh2ZPdNqBGtInCV8NZBTErheM4FsKfZ3T7jqzVzpWOSoE7S06kDOHAtkLHjftDa_HiIKZtceBKtncJkgO9k12vd1QdBQSVigQShkH9nEzNXEDZHc0RCSh9A6HfU6sFIwC7k">
+</div>
+<div class="flex items-center gap-1 bg-surface-container p-3 rounded-2xl rounded-tl-sm w-16 justify-center">
+<div class="w-2 h-2 bg-on-surface-variant rounded-full animate-pulse"></div>
+<div class="w-2 h-2 bg-on-surface-variant rounded-full animate-pulse delay-75"></div>
+<div class="w-2 h-2 bg-on-surface-variant rounded-full animate-pulse delay-150"></div>
+</div>
+</div>
+</main>
+<!-- Chat Input Area -->
+<div class="absolute bottom-[72px] left-0 w-full bg-surface border-t border-outline-variant p-gutter z-20">
+<div class="flex items-center gap-3 w-full max-w-[720px] mx-auto">
+<button class="w-10 h-10 rounded-full border border-outline text-on-surface-variant flex flex-shrink-0 items-center justify-center hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[24px]">add</span>
+</button>
+<div class="flex-1 relative">
+<input class="w-full h-[52px] rounded-full border-2 border-outline-variant focus:border-primary-container focus:ring-0 px-4 pr-12 text-on-surface placeholder:text-outline bg-surface-container-lowest font-body-md shadow-sm transition-colors" placeholder="메시지를 입력하세요..." type="text">
+</div>
+<button class="w-[52px] h-[52px] rounded-full bg-primary-container text-on-primary-container flex flex-shrink-0 items-center justify-center hover:bg-primary transition-colors shadow-sm active:scale-95">
+<span class="material-symbols-outlined text-[24px] translate-x-0.5" style="font-variation-settings: &quot;FILL&quot; 1;">send</span>
+</button>
+</div>
+</div>
+<!-- BottomNavBar -->
+<nav class="fixed md:absolute bottom-0 left-0 w-full z-50 flex justify-around items-center px-gutter py-2 pb-safe bg-surface border-t border-outline-variant h-[72px] rounded-t-xl shadow-lg md:shadow-none"><button class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-container-high transition-colors rounded-xl h-full">
+<span class="material-symbols-outlined mb-1">person</span>
+<span class="font-label-sm text-label-sm">내 정보</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-xl px-4 py-1 scale-90 transition-transform duration-200 h-full w-[72px]">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">chat</span>
+<span class="font-label-sm text-label-sm font-bold">챗봇</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-container-high transition-colors rounded-xl h-full">
+<span class="material-symbols-outlined mb-1">description</span>
+<span class="font-label-sm text-label-sm">리포트</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-container-high transition-colors rounded-xl h-full">
+<span class="material-symbols-outlined mb-1">arrow_back</span>
+<span class="font-label-sm text-label-sm">뒤로가기</span>
+</button></nav>
+</div>
+<script>
+        // Simple script to auto-scroll chat to bottom
+        window.onload = function() {
+            var chatContainer = document.querySelector('.chat-container');
+            if(chatContainer) {
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+        };
+    </script>
+
+
+
+
+
+
+
+
+
+
+
+
+</body></html>

@@ -1,0 +1,19 @@
+node_modules/
+.next/
+dist/
+.turbo/
+*.tsbuildinfo
+
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+.env
+.env.*
+!.env.example
+
+# MCP 서버 설정 (API 키 포함 — 절대 커밋하지 않음)
+.mcp.json
+
+.DS_Store

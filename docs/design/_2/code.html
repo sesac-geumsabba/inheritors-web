@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+
+<html lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>상속자들 - 온보딩</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;700&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-container-lowest": "#ffffff",
+                      "tertiary-fixed-dim": "#d5c1c9",
+                      "tertiary-container": "#807077",
+                      "surface-container-high": "#eae7e7",
+                      "on-error-container": "#93000a",
+                      "on-primary-fixed": "#3f001b",
+                      "on-primary-fixed-variant": "#8f0045",
+                      "on-surface": "#1c1b1b",
+                      "background": "#fcf9f8",
+                      "outline": "#8e6f76",
+                      "secondary-container": "#fe9d00",
+                      "primary-container": "#e01572",
+                      "surface-variant": "#e5e2e1",
+                      "on-secondary-container": "#663c00",
+                      "on-secondary": "#ffffff",
+                      "primary-fixed": "#ffd9e1",
+                      "on-secondary-fixed": "#2c1700",
+                      "surface-container": "#f0eded",
+                      "on-surface-variant": "#5a3f46",
+                      "inverse-surface": "#313030",
+                      "on-error": "#ffffff",
+                      "surface": "#fcf9f8",
+                      "surface-dim": "#dcd9d9",
+                      "primary-fixed-dim": "#ffb1c5",
+                      "tertiary": "#67585f",
+                      "secondary-fixed": "#ffdcbb",
+                      "inverse-on-surface": "#f3f0ef",
+                      "surface-container-highest": "#e5e2e1",
+                      "primary": "#b6005a",
+                      "on-tertiary-fixed": "#23181e",
+                      "secondary-fixed-dim": "#ffb869",
+                      "on-tertiary-fixed-variant": "#514349",
+                      "on-secondary-fixed-variant": "#673d00",
+                      "secondary": "#885200",
+                      "error-container": "#ffdad6",
+                      "surface-container-low": "#f6f3f2",
+                      "on-background": "#1c1b1b",
+                      "surface-bright": "#fcf9f8",
+                      "inverse-primary": "#ffb1c5",
+                      "on-primary-container": "#fffbff",
+                      "outline-variant": "#e2bdc5",
+                      "error": "#ba1a1a",
+                      "surface-tint": "#ba005c",
+                      "on-tertiary": "#ffffff",
+                      "tertiary-fixed": "#f2dde5",
+                      "on-primary": "#ffffff",
+                      "on-tertiary-container": "#fffbff",
+                      "brand-pink": "#F52D81",
+                      "brand-pink-light": "#FDE8F0"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "stack-gap-lg": "32px",
+                      "stack-gap-md": "20px",
+                      "base": "8px",
+                      "gutter": "16px",
+                      "container-padding": "24px",
+                      "touch-target-min": "56px"
+              },
+              "fontFamily": {
+                      "headline-lg-mobile": ["Be Vietnam Pro"],
+                      "headline-md": ["Be Vietnam Pro"],
+                      "label-lg": ["Noto Sans KR"],
+                      "body-lg": ["Noto Sans KR"],
+                      "headline-lg": ["Be Vietnam Pro"],
+                      "label-sm": ["Noto Sans KR"],
+                      "body-md": ["Noto Sans KR"]
+              },
+              "fontSize": {
+                      "headline-lg-mobile": ["28px", {"lineHeight": "38px", "fontWeight": "700"}],
+                      "headline-md": ["24px", {"lineHeight": "34px", "fontWeight": "700"}],
+                      "label-lg": ["16px", {"lineHeight": "24px", "letterSpacing": "0.02em", "fontWeight": "700"}],
+                      "body-lg": ["20px", {"lineHeight": "30px", "fontWeight": "500"}],
+                      "headline-lg": ["32px", {"lineHeight": "44px", "fontWeight": "700"}],
+                      "label-sm": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                      "body-md": ["18px", {"lineHeight": "28px", "fontWeight": "400"}]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+          font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        /* ScrollExpand Styles */
+        .scroll-expand-container {
+            height: 150vh; /* Create scroll space */
+            position: relative;
+            margin-bottom: 2rem;
+        }
+        .scroll-expand-sticky {
+            position: sticky;
+            top: 56px; /* Below app bar */
+            height: calc(100vh - 56px - 88px); /* Available height minus app bar and bottom action */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .scroll-expand-media-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .scroll-expand-media {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* or contain depending on image */
+            will-change: transform, clip-path;
+            transform-origin: center center;
+        }
+        .scroll-expand-content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .scroll-expand-title {
+            color: white;
+            font-size: 2rem;
+            font-weight: bold;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            text-align: center;
+            padding: 0 1rem;
+            opacity: 0;
+            transform: translateY(20px);
+            will-change: opacity, transform;
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+        }
+        
+        .scroll-hint {
+            position: absolute;
+            bottom: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--color-on-surface-variant);
+            animation: bounce 2s infinite;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+    </style>
+</head>
+<body class="bg-background min-h-screen flex flex-col items-center justify-center font-body-md text-on-background">
+<!-- Mobile Container -->
+<div class="w-full max-w-[480px] bg-surface h-[100dvh] flex flex-col relative overflow-hidden border-x border-outline-variant/30 shadow-2xl z-0" id="mobile-container">
+<!-- TopAppBar -->
+<header class="bg-surface flex justify-between items-center w-full px-container-padding h-touch-target-min docked full-width top-0 border-b border-outline-variant flat no shadows z-20 shrink-0">
+<div class="flex items-center gap-4 w-full">
+<span class="font-headline-md text-headline-md font-bold text-brand-pink truncate flex-1">상속자들</span>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col overflow-y-auto z-0 relative scroll-smooth" id="main-scroll-area">
+<!-- ScrollExpand Component -->
+<div class="scroll-expand-container" id="scroll-expand-section">
+<div class="scroll-expand-sticky">
+<div class="w-full h-full p-4 flex flex-col" id="card-frame">
+<div class="w-full flex-1 bg-brand-pink-light rounded-2xl flex items-center justify-center p-8 relative overflow-hidden z-1 border border-outline-variant/20 shadow-sm" id="media-card">
+<div class="scroll-expand-media-wrapper bg-white rounded-xl shadow-inner">
+<img alt="안전하고 편안한 상속 준비" class="scroll-expand-media object-contain p-4" id="scroll-media" src="https://lh3.googleusercontent.com/aida/AP1WRLvJ6tEPAwMTmzv4We3wgvUD4LXN6t53JCADrSxH21ILNyvtJGmT2nAfbtDbp31i1yPPp-X7vCaXCC35D_dqI78WFQ6AdyJrBBmPZEScDadJ7g2A_sPWersSR0jRXclHAdLSA2LPxjOIWM3Bwd8WUmanFX5ZEJn5zpgoiRzsh4V2VKLNtl_yo0aOItobqmFP-n3dsY6LZj7ua_-w0XV9QO0WhTVAi9xtMYJ_u1IOec-Hya-nS2w8gRQC4rlrVaoIcaP2zwCLos5U"/>
+</div>
+</div>
+</div>
+<div class="scroll-expand-content">
+<h2 class="scroll-expand-title" id="scroll-title">안전하고 편안한 상속 준비</h2>
+</div>
+<div class="scroll-hint" id="scroll-hint">
+<span class="text-sm font-medium mb-1">스크롤해서 확인하기</span>
+<span class="material-symbols-outlined">keyboard_arrow_down</span>
+</div>
+</div>
+</div>
+<!-- Welcome Text (Appears after scroll expand) -->
+<div class="px-container-padding pb-32">
+<div class="w-full bg-brand-pink-light/50 rounded-2xl p-6 text-center border border-outline-variant/20 shadow-sm flex flex-col items-center justify-center gap-4 z-1">
+<h1 class="font-headline-md text-headline-md text-on-surface">안녕하세요!</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant">
+                                안전하고 편안한 상속 준비,<br/>
+<span class="text-brand-pink font-bold">상속자들이 도와드릴게요.</span>
+</p>
+</div>
+</div>
+</main>
+<!-- Bottom Action Area -->
+<div class="absolute bottom-0 left-0 w-full px-container-padding pb-container-padding pt-4 bg-gradient-to-t from-surface via-surface to-transparent z-10">
+<button class="w-full h-touch-target-min bg-brand-pink text-white rounded-lg flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all shadow-md font-label-lg text-label-lg group">
+                시작하기
+                <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+</div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const scrollArea = document.getElementById('main-scroll-area');
+        const container = document.getElementById('scroll-expand-section');
+        const mediaCard = document.getElementById('media-card');
+        const media = document.getElementById('scroll-media');
+        const title = document.getElementById('scroll-title');
+        const hint = document.getElementById('scroll-hint');
+        const wrapper = document.querySelector('.scroll-expand-media-wrapper');
+        const cardFrame = document.getElementById('card-frame');
+
+        // Initial setup for the card to be centered and not full screen yet
+        const startInset = 32; // px inset for the card initially
+        const startRadius = 16; // px border radius initially
+        
+        // Easing function
+        const smoothstep = (min, max, value) => {
+            const x = Math.max(0, Math.min(1, (value - min) / (max - min)));
+            return x * x * (3 - 2 * x);
+        };
+
+        const updateAnimation = () => {
+            if (!scrollArea || !container) return;
+
+            // Calculate scroll progress within the container's area
+            const containerRect = container.getBoundingClientRect();
+            const scrollAreaRect = scrollArea.getBoundingClientRect();
+            
+            // Calculate how far the container has scrolled up relative to its starting position
+            // When containerRect.top == scrollAreaRect.top, progress is 0
+            // When containerRect.bottom == scrollAreaRect.bottom (or similar threshold), progress is 1
+            
+            const totalScrollDistance = container.offsetHeight - scrollArea.clientHeight;
+            
+            // Adjust calculation based on standard scroll event vs position relative to viewport
+            const scrollOffset = scrollArea.scrollTop;
+            
+            // Max scroll to complete animation
+            const maxScroll = window.innerHeight * 0.5; // Complete animation after half screen scroll
+            
+            let progress = Math.min(1, Math.max(0, scrollOffset / maxScroll));
+            const easedProgress = smoothstep(0, 1, progress);
+
+            // Apply transforms
+            if (easedProgress > 0) {
+                // Expanding phase
+                
+                // 1. Remove padding from card frame to expand to edges
+                const currentPadding = 16 * (1 - easedProgress);
+                cardFrame.style.padding = `${currentPadding}px`;
+                
+                // 2. Reduce border radius
+                const currentRadius = 16 * (1 - easedProgress);
+                mediaCard.style.borderRadius = `${currentRadius}px`;
+                wrapper.style.borderRadius = `${currentRadius * 0.75}px`;
+                
+                // 3. Remove backgrounds and borders as it expands
+                mediaCard.style.backgroundColor = `rgba(253, 232, 240, ${1 - easedProgress})`;
+                mediaCard.style.borderColor = `rgba(226, 189, 197, ${0.2 * (1 - easedProgress)})`;
+                mediaCard.style.padding = `${32 * (1 - easedProgress)}px`;
+                
+                // 4. Change object fit and scale image slightly
+                if (easedProgress > 0.8) {
+                    media.style.objectFit = 'cover';
+                    media.style.padding = '0';
+                    media.style.backgroundColor = '#F52D81'; // brand-pink for final background
+                } else {
+                    media.style.objectFit = 'contain';
+                    media.style.padding = `${16 * (1 - easedProgress)}px`;
+                    media.style.backgroundColor = 'transparent';
+                }
+                
+                // Scale image for effect
+                const scale = 1 + (easedProgress * 0.1);
+                media.style.transform = `scale(${scale})`;
+
+                // Show title
+                if (easedProgress > 0.5) {
+                    const titleProgress = (easedProgress - 0.5) * 2;
+                    title.style.opacity = titleProgress;
+                    title.style.transform = `translateY(${20 * (1 - titleProgress)}px)`;
+                } else {
+                    title.style.opacity = 0;
+                }
+
+                // Hide hint
+                hint.style.opacity = 1 - (easedProgress * 2);
+                
+            } else {
+                // Reset to initial state
+                cardFrame.style.padding = '1rem';
+                mediaCard.style.borderRadius = '1rem';
+                mediaCard.style.backgroundColor = 'rgb(253, 232, 240)';
+                mediaCard.style.borderColor = 'rgba(226, 189, 197, 0.2)';
+                mediaCard.style.padding = '2rem';
+                
+                wrapper.style.borderRadius = '0.75rem';
+                
+                media.style.objectFit = 'contain';
+                media.style.padding = '1rem';
+                media.style.backgroundColor = 'transparent';
+                media.style.transform = 'scale(1)';
+                
+                title.style.opacity = 0;
+                hint.style.opacity = 1;
+            }
+        };
+
+        // Listen for scroll events on the main area
+        scrollArea.addEventListener('scroll', () => {
+            requestAnimationFrame(updateAnimation);
+        });
+        
+        // Initial call
+        updateAnimation();
+    });
+</script>
+</body></html>
