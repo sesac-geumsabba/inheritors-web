@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import TopAppBar from "@/components/TopAppBar";
 import BottomNavBar from "@/components/BottomNavBar";
+import { CHAT_MESSAGES_STORAGE_KEY, CHAT_SESSION_ID_STORAGE_KEY } from "@/lib/chatStorage";
 
 interface ChatSource {
   source_type: "internal_chunk" | "case_law" | "statute";
@@ -57,12 +58,34 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000"
 // 먼저 보여주고 실제 호출은 이 기준 미달로 400이 나면(레이스 발생 시) 안내 메시지로 대체된다.
 const REPORT_TURN_THRESHOLD = 6;
 
+// 리포트 등 다른 탭으로 이동했다가 챗봇으로 돌아오면 컴포넌트가 새로 마운트되면서 useState
+// 초기값(welcome 메시지 1개)으로 리셋된다 — sessionStorage에 대화/세션ID를 저장해뒀다가
+// 마운트 시 복원한다. localStorage가 아니라 sessionStorage인 이유: 탭을 닫으면 자연스럽게
+// 새 상담으로 시작해야 하고(브라우저 재시작 후까지 이어질 필요는 없음), 다른 탭/사용자와도
+// 안 섞인다.
+
+// 답변 대기/생성 중임을 보여주는 점 3개 — 아직 토큰이 하나도 안 왔을 때(대기 중)는 크게,
+// 텍스트가 스트리밍되는 동안엔 문장 끝에 작게 붙여서 "아직 이어서 쓰는 중"임을 표시한다.
+function TypingDots({ size = "md" }: { size?: "sm" | "md" }) {
+  // span + inline-block: 이 컴포넌트가 <p> 안(스트리밍 중 텍스트 끝)에도 들어가는데, <p>는
+  // div 같은 block 요소를 못 담는다(HTML 스펙 — 브라우저가 <p>를 강제로 닫아버려서
+  // hydration mismatch 발생, 실측 확인). span은 phrasing content라 <p> 안에서도 안전.
+  const dot = size === "sm" ? "h-1.5 w-1.5" : "h-2 w-2";
+  return (
+    <>
+      <span className={`inline-block ${dot} animate-pulse rounded-full bg-on-surface-variant`} />
+      <span className={`inline-block ${dot} animate-pulse rounded-full bg-on-surface-variant delay-75`} />
+      <span className={`inline-block ${dot} animate-pulse rounded-full bg-on-surface-variant delay-150`} />
+    </>
+  );
+}
+
 export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "welcome",
       role: "assistant",
-      content: "안녕하세요! 상속자들의 법률 도우미 챗봇 '느리'입니다.\n어떤 도움이 필요하신가요? 아래 버튼을 누르시거나 직접 질문을 입력해주세요.",
+      content: "안녕하세요! 상속자들의 법률 도우미 챗봇 '상속자들'입니다.\n어떤 도움이 필요하신가요? 아래 버튼을 누르시거나 직접 질문을 입력해주세요.",
     },
   ]);
   const [input, setInput] = useState("");
@@ -85,9 +108,44 @@ export default function ChatPage() {
     isNearBottomRef.current = distanceFromBottom < 120;
   }
 
+  // 마운트 직후 첫 저장-effect 실행을 건너뛰기 위한 플래그. 복원 effect와 저장 effect가
+  // 같은 커밋에서 순서대로 도는데, 저장 effect가 먼저(복원이 적용되기 전) 한 번 돌면서
+  // 아직 welcome 메시지뿐인 상태를 그대로 sessionStorage에 덮어써버려 복원 자체가
+  // 무의미해지는 레이스가 실측 확인됨 — 그 첫 실행만 건너뛴다.
+  const skipNextPersistRef = useRef(true);
+
+  // 마운트 시 저장된 대화 복원 — useState 초기값에서 바로 읽지 않는 이유: Next.js는 이
+  // 컴포넌트를 서버에서도 한 번 렌더링하는데(SSR), 그때는 sessionStorage가 없어서 서버가
+  // 그린 HTML과 클라이언트 첫 렌더가 달라져 hydration mismatch가 난다. useEffect는 클라이언트
+  // 마운트 후에만 도니까 안전하게 한 박자 늦게 복원한다.
+  useEffect(() => {
+    const savedMessages = sessionStorage.getItem(CHAT_MESSAGES_STORAGE_KEY);
+    const savedSessionId = sessionStorage.getItem(CHAT_SESSION_ID_STORAGE_KEY);
+    if (savedMessages) {
+      try {
+        setMessages(JSON.parse(savedMessages) as ChatMessage[]);
+      } catch {
+        // 저장된 값이 깨져있으면 그냥 welcome 메시지로 시작 — 복구 불가라 무시.
+      }
+    }
+    if (savedSessionId) sessionIdRef.current = Number(savedSessionId);
+  }, []);
+
+  // 대화가 바뀔 때마다(스트리밍 도중 포함) 저장 — 리포트 등 다른 탭으로 이동했다가
+  // 돌아와도 이어서 볼 수 있어야 한다.
+  useEffect(() => {
+    if (skipNextPersistRef.current) {
+      skipNextPersistRef.current = false;
+      return;
+    }
+    sessionStorage.setItem(CHAT_MESSAGES_STORAGE_KEY, JSON.stringify(messages));
+  }, [messages]);
+
   useEffect(() => {
     if (isNearBottomRef.current) {
-      scrollAnchorRef.current?.scrollIntoView({ behavior: "smooth" });
+      // block: "end" — 앵커가 이제 참고 문서 앞(답변 말풍선 바로 뒤)에 있어서 기본값
+      // block: "start"를 쓰면 앵커 자체를 위로 붙이려다 답변이 화면 밖으로 밀려난다.
+      scrollAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
     }
   }, [messages]);
 
@@ -134,7 +192,9 @@ export default function ChatPage() {
             awaitingContinueCount: t.continue_count,
           });
         } else if (eventType === "done") {
-          sessionIdRef.current = (JSON.parse(data) as { session_id: number }).session_id;
+          const sessionId = (JSON.parse(data) as { session_id: number }).session_id;
+          sessionIdRef.current = sessionId;
+          sessionStorage.setItem(CHAT_SESSION_ID_STORAGE_KEY, String(sessionId));
         } else {
           updateMessage(botMsgId, (m) => ({ ...m, content: m.content + data }));
         }
@@ -214,7 +274,7 @@ export default function ChatPage() {
     <div className="flex h-[100dvh] flex-col overflow-hidden bg-surface-container-lowest">
       <TopAppBar />
 
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col overflow-hidden bg-surface-container-lowest pt-touch-target-min pb-[148px] md:my-8 md:rounded-2xl md:border md:border-outline-variant md:pb-0 md:pt-0 md:shadow-lg">
+      <main className="flex w-full flex-1 flex-col overflow-hidden bg-surface-container-lowest pt-touch-target-min pb-[148px]">
         {/* Viewing Area (Top) - Chat History */}
         <div
           ref={scrollContainerRef}
@@ -241,21 +301,25 @@ export default function ChatPage() {
 
                   {!msg.content && isStreaming && msg.id === lastMessageId ? (
                     <div className="flex w-16 items-center justify-center gap-1 rounded-2xl rounded-tl-sm bg-surface-container p-3">
-                      <div className="h-2 w-2 animate-pulse rounded-full bg-on-surface-variant" />
-                      <div className="h-2 w-2 animate-pulse rounded-full bg-on-surface-variant delay-75" />
-                      <div className="h-2 w-2 animate-pulse rounded-full bg-on-surface-variant delay-150" />
+                      <TypingDots />
                     </div>
                   ) : (
                     <div className="rounded-2xl rounded-tl-sm border border-outline-variant/30 bg-surface-container-high p-4 text-on-surface shadow-sm">
-                      <p
-                        className={`whitespace-pre-wrap text-body-md font-body-md ${
-                          isStreaming && msg.id === lastMessageId ? "streaming-cursor" : ""
-                        }`}
-                      >
+                      <p className="whitespace-pre-wrap text-body-md font-body-md">
                         {msg.content}
+                        {isStreaming && msg.id === lastMessageId && (
+                          <span className="ml-1.5 inline-flex translate-y-[2px] items-center gap-1">
+                            <TypingDots size="sm" />
+                          </span>
+                        )}
                       </p>
                     </div>
                   )}
+
+                  {/* 자동 스크롤 목표점 — 답변 말풍선 바로 뒤에 둔다. 메시지 끝(참고 문서/면책
+                      문구 지난 자리)에 두면 sources가 스트리밍 시작 전에 먼저 도착해서 답변을
+                      다 안 읽었는데 참고 문서까지 보이게 끌려 내려간다(실측). */}
+                  {msg.id === lastMessageId && <div ref={scrollAnchorRef} />}
 
                   {msg.awaitingContinueId !== undefined && (
                     <button
@@ -277,16 +341,23 @@ export default function ChatPage() {
                     </p>
                   )}
 
-                  {/* Source Card (RAG Citation) */}
+                  {/* Source Card (RAG Citation) — 기본은 접힌 상태, 눌러야 목록이 펼쳐짐.
+                      <details>/<summary>는 네이티브 토글이라 메시지마다 별도 열림 상태를
+                      React에서 관리할 필요가 없다. */}
                   {msg.sources && msg.sources.length > 0 && (
-                    <div className="w-full rounded-xl border border-outline-variant/30 bg-surface-container-lowest p-4 shadow-sm">
-                      <div className="mb-3 flex items-center gap-2">
+                    <details className="group w-full rounded-xl border border-outline-variant/30 bg-surface-container-lowest p-4 shadow-sm">
+                      <summary className="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
                         <div className="rounded-full bg-surface-container-high p-1.5 text-brand-pink">
                           <span className="material-symbols-outlined icon-fill text-[20px]">gavel</span>
                         </div>
-                        <span className="text-label-sm font-bold text-brand-pink">참고 문서</span>
-                      </div>
-                      <ul className="space-y-2">
+                        <span className="flex-1 text-label-sm font-bold text-brand-pink">
+                          참고 문서 ({msg.sources.length})
+                        </span>
+                        <span className="material-symbols-outlined text-outline transition-transform duration-200 group-open:rotate-180">
+                          expand_more
+                        </span>
+                      </summary>
+                      <ul className="mt-3 space-y-2">
                         {msg.sources.map((s, i) => (
                           <li key={i} className="flex items-start gap-2">
                             <span className="material-symbols-outlined mt-1 text-[18px] text-outline">
@@ -304,14 +375,12 @@ export default function ChatPage() {
                               ) : (
                                 s.title
                               )}
-                              <div>
-                                유사도 {s.score}
-                                </div>
+                              <span className="block">유사도 {s.score}</span>
                             </span>
                           </li>
                         ))}
                       </ul>
-                    </div>
+                    </details>
                   )}
 
                   {/* MCP 호출 여부/이유 — 참고 문서 카드 바로 아래에 노출 */}
@@ -354,14 +423,12 @@ export default function ChatPage() {
               </Link>
             </div>
           )}
-
-          <div ref={scrollAnchorRef} />
         </div>
 
         {/* Interaction Area (Bottom) - Fixed above BottomNavBar on mobile */}
         <div
           style={{ fontSize: "16px" }}
-          className="fixed bottom-[72px] left-0 z-40 w-full border-t border-outline-variant bg-surface-container-lowest p-gutter md:static md:bottom-auto md:z-10"
+          className="fixed bottom-[72px] left-0 z-40 w-full border-t border-outline-variant bg-surface-container-lowest p-gutter"
         >
           <form
             onSubmit={(e) => {

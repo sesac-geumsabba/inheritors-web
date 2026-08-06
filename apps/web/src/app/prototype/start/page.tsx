@@ -7,7 +7,7 @@ export default function PrototypeStartPage() {
     <div className="flex min-h-[max(884px,100dvh)] flex-col">
       <TopAppBar />
 
-      <main className="flex flex-1 flex-col overflow-y-auto pb-[84px] pt-16 md:pb-0">
+      <main className="flex flex-1 flex-col overflow-y-auto pb-[84px] pt-16">
         {/* Viewing Area (Top) - Neuri Greeting */}
         <div className="relative flex min-h-[353px] flex-1 flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-surface-container-low to-surface px-margin-mobile py-8">
           <div className="absolute left-1/2 top-1/2 -z-10 aspect-square w-[150%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary-fixed opacity-20 blur-3xl" />
@@ -28,7 +28,7 @@ export default function PrototypeStartPage() {
         </div>
 
         {/* Interaction Area (Bottom) - Value Proposition & Actions */}
-        <div className="relative flex flex-1 flex-col border-t border-outline-variant bg-surface-container-lowest px-margin-mobile py-8 md:border-none">
+        <div className="relative flex flex-1 flex-col border-t border-outline-variant bg-surface-container-lowest px-margin-mobile py-8">
           <div className="mx-auto flex h-full w-full max-w-md flex-col justify-between gap-6">
             <div className="flex flex-col gap-4">
               <div className="flex items-start gap-4 rounded-xl border border-outline-variant bg-surface-container p-5 shadow-sm">

@@ -32,7 +32,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-[max(884px,100dvh)] bg-surface-container-lowest pb-[140px]">
       <TopAppBar />
-      <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-container-padding pt-[calc(56px+20px)] md:my-8 md:rounded-2xl md:border md:border-outline-variant md:bg-surface md:shadow-lg md:pb-8">
+      <main className="flex w-full flex-col gap-6 px-container-padding pt-[calc(56px+20px)]">
         {children}
       </main>
       <BottomNavBar />
@@ -210,7 +210,7 @@ function ReportPageInner() {
           type="button"
           className="flex min-h-touch-target-min w-full items-center justify-center gap-2 rounded-full bg-brand-pink py-4 text-label-lg font-label-lg text-white shadow-sm transition-all hover:opacity-90 active:scale-95"
         >
-          전문가(PB) 상담 연결하기
+          전문가 상담 연결하기
           <span className="material-symbols-outlined">arrow_forward</span>
         </button>
       </section>

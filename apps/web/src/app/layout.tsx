@@ -22,9 +22,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="antialiased">
-        <FontScaleProvider>
-          <OnboardingProvider>{children}</OnboardingProvider>
-        </FontScaleProvider>
+        {/* 반응형 대신 iPhone 14 Pro Max 폭(430px)에 항상 고정 — 창이 넓어져도 데스크톱
+            레이아웃으로 안 바뀌게 한다. [transform:translateZ(0)]는 시각 효과가 아니라
+            새 containing block을 만드는 트릭: 안 걸면 TopAppBar/BottomNavBar 같은
+            position:fixed 자식들이 이 프레임이 아니라 브라우저 창 전체 폭을 기준으로
+            눕는다(이게 바로 넓은 화면에서 하단 내비가 안 보이던 원인). */}
+        <div className="flex min-h-screen justify-center bg-on-background/10">
+          <div className="relative flex w-full max-w-[430px] flex-col overflow-hidden border-x border-outline-variant/30 bg-surface shadow-2xl [transform:translateZ(0)]">
+            <FontScaleProvider>
+              <OnboardingProvider>{children}</OnboardingProvider>
+            </FontScaleProvider>
+          </div>
+        </div>
       </body>
     </html>
   );

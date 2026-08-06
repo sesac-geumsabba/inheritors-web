@@ -189,7 +189,7 @@ export default function ChatPage() {
     <div className="flex min-h-[max(884px,100dvh)] flex-col">
       <TopAppBar />
 
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col overflow-hidden pb-[84px] pt-16 md:my-8 md:rounded-2xl md:border md:border-outline-variant md:pb-0 md:pt-0 md:shadow-lg">
+      <main className="flex w-full flex-1 flex-col overflow-hidden pb-[84px] pt-16">
         {/* Viewing Area (Top) - Chat History */}
         <div className="no-scrollbar flex-1 space-y-6 overflow-y-auto bg-background px-margin-mobile py-6">
           <div className="flex justify-center">

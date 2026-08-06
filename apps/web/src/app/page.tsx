@@ -10,7 +10,6 @@ export default function OnboardingPage() {
   const mediaCardRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const mediaRef = useRef<HTMLImageElement>(null);
-  const titleRef = useRef<HTMLHeadingElement>(null);
   const hintRef = useRef<HTMLDivElement>(null);
 
   const smoothstep = (min: number, max: number, value: number) => {
@@ -31,10 +30,9 @@ export default function OnboardingPage() {
     const mediaCard = mediaCardRef.current;
     const wrapper = wrapperRef.current;
     const media = mediaRef.current;
-    const title = titleRef.current;
     const hint = hintRef.current;
 
-    if (!cardFrame || !mediaCard || !wrapper || !media || !title || !hint) return;
+    if (!cardFrame || !mediaCard || !wrapper || !media || !hint) return;
 
     if (easedProgress > 0) {
       const currentPadding = 16 * (1 - easedProgress);
@@ -45,7 +43,6 @@ export default function OnboardingPage() {
       wrapper.style.borderRadius = `${currentRadius * 0.75}px`;
 
       const alpha = 1 - easedProgress;
-      mediaCard.style.backgroundColor = `rgba(253, 232, 240, ${alpha})`;
       mediaCard.style.borderColor = `rgba(226, 189, 197, ${0.2 * alpha})`;
       mediaCard.style.padding = `${32 * alpha}px`;
 
@@ -62,19 +59,10 @@ export default function OnboardingPage() {
       const scale = 1 + easedProgress * 0.1;
       media.style.transform = `scale(${scale})`;
 
-      if (easedProgress > 0.5) {
-        const titleProgress = (easedProgress - 0.5) * 2;
-        title.style.opacity = String(titleProgress);
-        title.style.transform = `translateY(${20 * (1 - titleProgress)}px)`;
-      } else {
-        title.style.opacity = "0";
-      }
-
       hint.style.opacity = String(Math.max(0, 1 - easedProgress * 2));
     } else {
       cardFrame.style.padding = "1rem";
       mediaCard.style.borderRadius = "1rem";
-      mediaCard.style.backgroundColor = "rgb(253, 232, 240)";
       mediaCard.style.borderColor = "rgba(226, 189, 197, 0.2)";
       mediaCard.style.padding = "2rem";
       wrapper.style.borderRadius = "0.75rem";
@@ -82,7 +70,6 @@ export default function OnboardingPage() {
       media.style.padding = "1rem";
       media.style.backgroundColor = "transparent";
       media.style.transform = "scale(1)";
-      title.style.opacity = "0";
       hint.style.opacity = "1";
     }
   }, []);
@@ -102,11 +89,10 @@ export default function OnboardingPage() {
 
   return (
     <>
-      <div className="flex min-h-screen items-center justify-center bg-on-background/10">
-        {/* 모바일 컨테이너 */}
-        <div className="relative flex h-[100dvh] w-full max-w-[480px] flex-col overflow-hidden border-x border-outline-variant/30 bg-surface shadow-2xl">
-
-          {/* TopAppBar */}
+      {/* 데스크톱/모바일 공통 폭 고정 프레임은 layout.tsx가 제공(iPhone 14 Pro Max 430px) —
+          여기선 그 프레임 안에서 온보딩 화면 자체의 h-[100dvh] 레이아웃만 관리한다. */}
+      <div className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-surface">
+        {/* TopAppBar */}
           <header className="z-20 flex h-touch-target-min w-full shrink-0 items-center border-b border-outline-variant bg-surface px-container-padding">
             <span className="flex-1 truncate text-headline-md font-headline-md font-bold text-brand-pink">
               상속자들
@@ -135,7 +121,7 @@ export default function OnboardingPage() {
                 >
                   <div
                     ref={mediaCardRef}
-                    className="relative z-[1] flex flex-1 items-center justify-center overflow-hidden border border-outline-variant/20 bg-brand-pink-light shadow-sm"
+                    className="relative z-[1] flex flex-1 items-center justify-center overflow-hidden border border-outline-variant/20 shadow-sm"
                     style={{ borderRadius: "1rem", padding: "2rem" }}
                   >
                     <div
@@ -162,22 +148,6 @@ export default function OnboardingPage() {
                   </div>
                 </div>
 
-                {/* 오버레이 타이틀 */}
-                <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center">
-                  <h2
-                    ref={titleRef}
-                    className="px-4 text-center text-2xl font-bold text-white"
-                    style={{
-                      textShadow: "0 2px 10px rgba(0,0,0,0.5)",
-                      opacity: 0,
-                      transform: "translateY(20px)",
-                      willChange: "opacity, transform",
-                    }}
-                  >
-                    안전하고 편안한 상속 준비
-                  </h2>
-                </div>
-
                 {/* 스크롤 힌트 */}
                 <div
                   ref={hintRef}
@@ -192,7 +162,7 @@ export default function OnboardingPage() {
 
             {/* 환영 텍스트 */}
             <div className="px-container-padding pb-32">
-              <div className="flex w-full flex-col items-center justify-center gap-4 rounded-2xl border border-outline-variant/20 bg-brand-pink-light/50 p-6 text-center shadow-sm">
+              <div className="flex flex-col justify-center gap-4 rounded-2xl border border-outline-variant/20 bg-brand-pink-light/50 p-6 text-center shadow-sm">
                 <h1 className="text-headline-md font-headline-md text-on-surface">
                   안녕하세요!
                 </h1>
@@ -206,11 +176,11 @@ export default function OnboardingPage() {
           </main>
 
           {/* 하단 CTA */}
-          <div className="absolute bottom-0 left-0 z-10 w-full bg-gradient-to-t from-surface via-surface to-transparent px-container-padding pb-container-padding pt-4">
+          <div className="absolute bottom-0 left-0 z-10 w-full bg-gradient-to-t from-surface via-surface to-transparent px-0 pb-container-padding pt-4">
             <button
               type="button"
               onClick={handleStart}
-              className="group flex h-touch-target-min w-full items-center justify-center gap-2 rounded-lg bg-brand-pink text-label-lg font-label-lg font-bold text-white shadow-md transition-all hover:opacity-90 active:scale-[0.98]"
+              className="group flex h-touch-target-min w-full items-center justify-center gap-2 rounded-full bg-brand-pink text-label-lg font-label-lg font-bold text-white shadow-md transition-all hover:opacity-90 active:scale-[0.98]"
             >
               시작하기
               <span className="material-symbols-outlined transition-transform group-hover:translate-x-1">
@@ -218,7 +188,6 @@ export default function OnboardingPage() {
               </span>
             </button>
           </div>
-        </div>
       </div>
 
       <style>{`
