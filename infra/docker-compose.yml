@@ -18,5 +18,39 @@ services:
       - "8000:8000"
     env_file:
       - ../apps/api/.env
+    environment:
+      # .env의 OLLAMA_BASE_URL/LEXGUARD_MCP_URL(로컬 개발용 localhost)을 컨테이너 네트워크용으로
+      # 덮어씀 — api 컨테이너 안에서 localhost는 자기 자신이라 옆 컨테이너를 못 찾는다.
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - LEXGUARD_MCP_URL=http://lexguard-mcp:9099/mcp
+    depends_on:
+      - ollama
+      - lexguard-mcp
     # DB는 단일 인스턴스(Supabase 등)를 DATABASE_URL로 연결
     # 법원/법제처 API 키도 이 env_file에서 관리
+
+  lexguard-mcp:
+    # korean-law-mcp(위 api 컨테이너 안에서 실행)가 판례를 못 찾을 때만 쓰는 폴백 서버
+    # (apps/api/app/lexguard_client.py). 이 저장소에 벤더링하지 않고 Docker의 git remote
+    # context 기능으로 바로 빌드 — 서브모듈/코드 복사 없이 최신 upstream을 그대로 씀.
+    build:
+      context: https://github.com/SeoNaRu/lexguard-mcp.git
+    env_file:
+      - ../apps/api/.env   # LAW_API_KEY만 씀 (open.law.go.kr에서 별도 발급 필요)
+    ports:
+      - "127.0.0.1:9099:9099"
+
+  ollama:
+    # 답변 생성 모델(EEVE-Korean 10.8B Q4, ~6.5GB)이 이미지에 미리 구워져 있어(infra/ollama/Dockerfile,
+    # Docker Hub: popopododo/inheritors-ollama) pull만 하면 바로 뜬다 — 컴퓨터마다 모델을 새로
+    # 받을 필요 없음. 다른 모델로 바꾸려면 infra/ollama/Dockerfile을 다시 빌드해 push.
+    image: popopododo/inheritors-ollama:latest
+    ports:
+      # 127.0.0.1로 루프백에만 바인딩 — 0.0.0.0으로 열면 nginx(infra/nginx/ollama.conf)를
+      # 거치지 않고 누구나 <EC2 IP>:11434로 바로 붙어 무료로 LLM을 돌릴 수 있게 된다.
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+
+volumes:
+  ollama_models:

@@ -161,6 +161,40 @@ pdfjs/onnxruntime/sharp 등 무거운 의존성 때문에 콜드 기동에만 1~
 400자로 시작했다가, 한 턴에 보이는 답변이 맥락을 다 못 담는다는 피드백으로 800자로
 상향 — 여전히 감으로 정한 값.
 
+### 4.8 판례 검색 폴백 — lexguard-mcp (SeoNaRu, Streamable HTTP)
+
+korean-law-mcp가 검색어/rate limit 문제로 판례 0건을 반환할 때, 별개의 국가법령정보센터 API
+키로 동작하는 [lexguard-mcp](https://github.com/SeoNaRu/lexguard-mcp)(`precedent_lookup_tool`)를
+보조로 호출한다 (`apps/api/app/lexguard_client.py`, `mcp_agent.select_and_run`). 법령
+검색(`search_law`)은 폴백 대상에서 제외 — lexguard-mcp엔 동일한 키워드 검색 tool이 없고
+(`law_article_tool`은 법령명을 정확히 알아야 하는 직접 조회용), `legal_qa_tool`은 응답
+구조가 완전히 달라(법령/판례/해석/위원회 통합 요약, `results` 필드가 평평한 목록이 아님)
+파싱을 새로 설계해야 함 — 판례 폴백 하나로 범위를 좁혔다.
+
+**전송 방식이 달라 기존 클라이언트 재사용 불가**: korean-law-mcp는 stdio(자식 프로세스
+JSON-RPC)지만 lexguard-mcp는 Streamable HTTP(SSE, `mcp` 공식 SDK 필요) — `mcp_client.py`의
+수기 JSON-RPC 코드를 못 쓰고 새 클라이언트를 만들었다. 호출 빈도가 낮은 보조 경로라
+korean-law-mcp처럼 프로세스를 상주시키지 않고 매 호출마다 세션을 새로 연다.
+
+**mcp SDK 응답 속성명 실측**: `CallToolResult`는 MCP 스펙상 `isError`/`structuredContent`
+(camelCase)지만, 파이썬 클라이언트 객체의 실제 속성은 `is_error`/`structured_content`
+(snake_case) — 타입 힌트만 보고 짐작하면 `AttributeError`. 실제 컨테이너를 로컬에 띄우고
+더미 키로 호출해 실측 확인.
+
+**precedent_lookup_tool 응답 필드**: `precedents` 배열의 각 항목이 영문 별칭(`case_name`,
+`court_name` 등)과 법제처 원본 한글 키(`사건명`, `법원명` 등)를 소스에 따라 섞어 반환해서
+(lexguard-mcp 소스의 `src/routes/resource_handlers.py` 실측 확인) 클라이언트가 둘 다
+방어적으로 조회.
+
+**LAW_API_KEY는 korean-law-mcp의 LAW_OC와 별개**: open.law.go.kr에서 개별 발급해야 하고
+(회원가입 → OPEN API 활용 신청 → **호출하는 서버의 IP/도메인 등록 필요**), 등록한 IP에서만
+동작한다 — 로컬 Docker(내 PC IP)와 EC2 배포 환경은 등록을 따로 해야 할 수 있음.
+
+**로컬 실행**: `infra/docker-compose.yml`의 `lexguard-mcp` 서비스가 이 저장소를 벤더링하지
+않고 Docker의 git remote build context(`build: context: https://github.com/...`)로 직접
+빌드한다 — 서브모듈/코드 복사 없이 최신 upstream을 그대로 씀 (`docker build <git-url>`이
+공식 지원하는 기능, 실측 확인).
+
 ## 5. 진행 상황 체크리스트
 
 - [x] 질의 embedding + `chunks` 벡터 검색 리트리버 (카테고리별 균형 검색 + 은행/신탁유형 메타데이터 필터)
@@ -191,7 +225,8 @@ pdfjs/onnxruntime/sharp 등 무거운 의존성 때문에 콜드 기동에만 1~
 
 ## 7. 다음 할 일
 
-1. **MCP 캐싱/폴백**: 동일 판례/조문 재조회 방지 캐시, 타임아웃 시 폴백 데이터 (이슈 원문 스코프, 아직 미착수).
+1. **MCP 캐싱**: 동일 판례/조문 재조회 방지 캐시 (이슈 원문 스코프, 아직 미착수). 폴백은
+   판례 검색만 구현됨(4.8절, lexguard-mcp) — 법령 검색 폴백, 캐싱은 아직.
 2. **스미싱 패턴 감지**: 답변 생성 중단 + 경고 레이어 (이슈 원문 스코프, 아직 미착수).
 3. **은행 필터 오탐 수정**: "KB 말고 다른 은행도" 같은 질의에서 `detect_bank`가 여전히
    해당 은행으로 필터를 고정시키는 문제 (4.5절, [demo-dialogue.md](./demo-dialogue.md) 참고).

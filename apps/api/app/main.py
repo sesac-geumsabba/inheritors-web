@@ -11,6 +11,7 @@ from app.mcp_client import mcp_client
 from app.routers.chat_openai_router import router as chat_openai_router
 from app.routers.chat_router import router as chat_router
 from app.routers.mcp_router import router as mcp_router
+from app.routers.report_router import router as report_router
 from packages.rag.chains import warm_up
 from packages.rag.embeddings import embed_query
 from packages.rag.openai_chains import warm_up as openai_warm_up
@@ -56,6 +57,7 @@ app.add_middleware(
 app.include_router(mcp_router)
 app.include_router(chat_router)
 app.include_router(chat_openai_router)
+app.include_router(report_router)
 
 
 @app.get("/health")

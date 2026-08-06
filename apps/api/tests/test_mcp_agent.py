@@ -159,6 +159,67 @@ class TestSelectAndRun(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(sources, [])
         self.assertEqual(called_tools, set())
 
+    async def test_precedent_fallback_used_when_primary_empty(self):
+        """korean-law-mcp가 0건이면 lexguard-mcp로 보완 호출한다."""
+        fallback_result = [{"source_type": "case_law", "title": "lexguard", "score": 0.9}]
+        with (
+            patch.object(
+                mcp_agent, "_agent_llm", return_value=_fake_llm([_tool_call("search_decisions_tool", "유류분 반환")])
+            ),
+            patch.object(mcp_agent.mcp_client, "search_decisions", new=AsyncMock(return_value=[])),
+            patch.object(
+                mcp_agent.lexguard_client, "search_decisions", new=AsyncMock(return_value=fallback_result)
+            ) as mock_fallback,
+        ):
+            sources, called_tools, _ = await mcp_agent.select_and_run("판례만 알려줘")
+
+        mock_fallback.assert_awaited_once_with("유류분 반환")
+        self.assertEqual(sources, fallback_result)
+        self.assertEqual(called_tools, {"search_decisions"})
+
+    async def test_precedent_fallback_skipped_when_primary_has_results(self):
+        """korean-law-mcp가 결과를 이미 찾았으면 lexguard-mcp는 호출하지 않는다."""
+        case_result = [{"source_type": "case_law", "score": 0.8}]
+        with (
+            patch.object(
+                mcp_agent, "_agent_llm", return_value=_fake_llm([_tool_call("search_decisions_tool", "유류분 반환")])
+            ),
+            patch.object(mcp_agent.mcp_client, "search_decisions", new=AsyncMock(return_value=case_result)),
+            patch.object(mcp_agent.lexguard_client, "search_decisions", new=AsyncMock()) as mock_fallback,
+        ):
+            sources, _, _ = await mcp_agent.select_and_run("판례만 알려줘")
+
+        mock_fallback.assert_not_awaited()
+        self.assertEqual(sources, case_result)
+
+    async def test_law_tool_has_no_fallback(self):
+        """search_law는 lexguard-mcp에 동일한 키워드 검색 tool이 없어 폴백하지 않는다(4.8절)."""
+        with (
+            patch.object(mcp_agent, "_agent_llm", return_value=_fake_llm([_tool_call("search_law_tool", "유류분")])),
+            patch.object(mcp_agent.mcp_client, "search_law", new=AsyncMock(return_value=[])),
+            patch.object(mcp_agent.lexguard_client, "search_decisions", new=AsyncMock()) as mock_fallback,
+        ):
+            sources, _, _ = await mcp_agent.select_and_run("유류분이 뭐야")
+
+        mock_fallback.assert_not_awaited()
+        self.assertEqual(sources, [])
+
+    async def test_precedent_fallback_error_keeps_empty(self):
+        """lexguard-mcp 호출 자체가 실패해도 전체 요청은 막히지 않는다."""
+        with (
+            patch.object(
+                mcp_agent, "_agent_llm", return_value=_fake_llm([_tool_call("search_decisions_tool", "유류분 반환")])
+            ),
+            patch.object(mcp_agent.mcp_client, "search_decisions", new=AsyncMock(return_value=[])),
+            patch.object(
+                mcp_agent.lexguard_client, "search_decisions", new=AsyncMock(side_effect=RuntimeError("lexguard down"))
+            ),
+        ):
+            sources, called_tools, _ = await mcp_agent.select_and_run("판례만 알려줘")
+
+        self.assertEqual(sources, [])
+        self.assertEqual(called_tools, {"search_decisions"})
+
     async def test_empty_or_non_string_query_ignored(self):
         tool_calls = [
             _tool_call("search_law_tool", "   ", call_id="1"),

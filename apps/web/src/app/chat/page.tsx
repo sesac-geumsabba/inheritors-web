@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import TopAppBar from "@/components/TopAppBar";
 import BottomNavBar from "@/components/BottomNavBar";
@@ -51,6 +52,10 @@ const QUICK_ACTIONS = [
 ];
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
+
+// apps/api/app/report.py의 MIN_USER_TURNS_FOR_REPORT와 값을 맞춰야 한다 — 여기서 배너를
+// 먼저 보여주고 실제 호출은 이 기준 미달로 400이 나면(레이스 발생 시) 안내 메시지로 대체된다.
+const REPORT_TURN_THRESHOLD = 6;
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -202,12 +207,14 @@ export default function ChatPage() {
 
   const lastMessageId = messages[messages.length - 1]?.id;
   const showQuickActions = messages.length <= 1;
+  const userTurnCount = messages.filter((m) => m.role === "user").length;
+  const showReportBanner = userTurnCount >= REPORT_TURN_THRESHOLD && sessionIdRef.current != null;
 
   return (
-    <div className="flex min-h-[max(884px,100dvh)] flex-col bg-surface-container-lowest">
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-surface-container-lowest">
       <TopAppBar />
 
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col overflow-hidden pb-[72px] pt-touch-target-min md:my-8 md:rounded-2xl md:border md:border-outline-variant md:pb-0 md:pt-0 md:shadow-lg">
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col overflow-hidden bg-surface-container-lowest pt-touch-target-min pb-[148px] md:my-8 md:rounded-2xl md:border md:border-outline-variant md:pb-0 md:pt-0 md:shadow-lg">
         {/* Viewing Area (Top) - Chat History */}
         <div
           ref={scrollContainerRef}
@@ -288,7 +295,6 @@ export default function ChatPage() {
                             <span className="flex-1 text-body-md font-body-md leading-snug text-on-surface-variant">
                               {s.url ? (
                                 <a
-                                  href={s.url}
                                   target="_blank"
                                   rel="noreferrer"
                                   className="text-brand-pink underline underline-offset-2"
@@ -298,7 +304,9 @@ export default function ChatPage() {
                               ) : (
                                 s.title
                               )}
-                              {s.page ? ` p.${s.page}` : ""} · 유사도 {s.score}
+                              <div>
+                                유사도 {s.score}
+                                </div>
                             </span>
                           </li>
                         ))}
@@ -333,11 +341,28 @@ export default function ChatPage() {
               </div>
             )
           )}
+          {showReportBanner && (
+            <div className="flex w-full max-w-[90%] flex-col gap-2 rounded-2xl border border-brand-pink/30 bg-brand-pink-light p-4 shadow-sm">
+              <p className="text-body-md font-body-md text-on-surface">
+                지금까지 상담하신 내용을 바탕으로 자산 현황과 리포트를 정리해드릴까요?
+              </p>
+              <Link
+                href={`/report?session_id=${sessionIdRef.current}`}
+                className="self-start rounded-full bg-brand-pink px-4 py-2 text-label-sm font-bold text-white transition-colors hover:opacity-90"
+              >
+                상담 리포트 보기
+              </Link>
+            </div>
+          )}
+
           <div ref={scrollAnchorRef} />
         </div>
 
-        {/* Interaction Area (Bottom) */}
-        <div className="z-10 w-full border-t border-outline-variant bg-surface p-gutter">
+        {/* Interaction Area (Bottom) - Fixed above BottomNavBar on mobile */}
+        <div
+          style={{ fontSize: "16px" }}
+          className="fixed bottom-[72px] left-0 z-40 w-full border-t border-outline-variant bg-surface-container-lowest p-gutter md:static md:bottom-auto md:z-10"
+        >
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -352,7 +377,7 @@ export default function ChatPage() {
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="메시지를 입력하세요..."
                 disabled={isStreaming}
-                className="h-[52px] w-full rounded-full border-2 border-outline-variant bg-surface-container-lowest px-4 text-on-surface shadow-sm outline-none placeholder:text-outline focus:border-primary-container disabled:opacity-60 text-body-md font-body-md"
+                className="h-[52px] w-full rounded-full border-2 border-outline-variant bg-surface-container-lowest px-4 text-on-surface shadow-sm outline-none placeholder:text-outline focus:border-primary-container disabled:opacity-60 text-[18px] leading-[28px] font-body-md"
               />
             </div>
             <button
