@@ -191,8 +191,11 @@ export default function OnboardingPage() {
             </div>
 
             {/* 환영 텍스트 */}
-            <div className="px-container-padding pb-32">
-              <div className="flex w-full flex-col items-center justify-center gap-4 rounded-2xl border border-outline-variant/20 bg-brand-pink-light/50 p-6 text-center shadow-sm">
+            <div className="box-border w-full px-4 pb-32">
+              <div
+                className="box-border mb-auto flex w-full flex-col items-center justify-center gap-4 rounded-2xl border border-outline-variant/20 bg-brand-pink-light p-8 text-center shadow-sm"
+                style={{ minHeight: "456.43px" }}
+              >
                 <h1 className="text-headline-md font-headline-md text-on-surface">
                   안녕하세요!
                 </h1>
@@ -206,7 +209,7 @@ export default function OnboardingPage() {
           </main>
 
           {/* 하단 CTA */}
-          <div className="absolute bottom-0 left-0 z-10 w-full bg-gradient-to-t from-surface via-surface to-transparent px-container-padding pb-container-padding pt-4">
+          <div className="box-border absolute bottom-0 left-0 z-10 w-full bg-gradient-to-t from-surface via-surface to-transparent px-4 pb-container-padding pt-4">
             <button
               type="button"
               onClick={handleStart}

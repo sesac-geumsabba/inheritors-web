@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
         openai_warm_up()
     except Exception as e:
-        print(f"[warn] OpenAI warm-up 실패 — OPENAI_API_KEY 확인 필요, 첫 /chat 요청이 실패할 수 있음: {e}")
+        print(f"[warn] OpenAI warm-up 실패 - OPENAI_API_KEY 확인 필요, 첫 /chat 요청이 실패할 수 있음: {e}")
     try:
         # korean-law-mcp는 콜드 기동에 1~2초 걸려서(pdfjs/onnxruntime/sharp 등 무거운 require)
         # 미리 띄워두지 않으면 첫 판례/법령 질문이 라우터 타임아웃에 걸릴 수 있음.
