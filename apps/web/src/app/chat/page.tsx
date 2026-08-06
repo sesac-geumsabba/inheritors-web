@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import TopAppBar from "@/components/TopAppBar";
 import BottomNavBar from "@/components/BottomNavBar";
@@ -51,6 +52,10 @@ const QUICK_ACTIONS = [
 ];
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
+
+// apps/api/app/report.py의 MIN_USER_TURNS_FOR_REPORT와 값을 맞춰야 한다 — 여기서 배너를
+// 먼저 보여주고 실제 호출은 이 기준 미달로 400이 나면(레이스 발생 시) 안내 메시지로 대체된다.
+const REPORT_TURN_THRESHOLD = 6;
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -202,6 +207,8 @@ export default function ChatPage() {
 
   const lastMessageId = messages[messages.length - 1]?.id;
   const showQuickActions = messages.length <= 1;
+  const userTurnCount = messages.filter((m) => m.role === "user").length;
+  const showReportBanner = userTurnCount >= REPORT_TURN_THRESHOLD && sessionIdRef.current != null;
 
   return (
     <div className="flex min-h-[max(884px,100dvh)] flex-col bg-surface-container-lowest">
@@ -288,7 +295,6 @@ export default function ChatPage() {
                             <span className="flex-1 text-body-md font-body-md leading-snug text-on-surface-variant">
                               {s.url ? (
                                 <a
-                                  href={s.url}
                                   target="_blank"
                                   rel="noreferrer"
                                   className="text-brand-pink underline underline-offset-2"
@@ -298,7 +304,9 @@ export default function ChatPage() {
                               ) : (
                                 s.title
                               )}
-                              {s.page ? ` p.${s.page}` : ""} · 유사도 {s.score}
+                              <div>
+                                유사도 {s.score}
+                                </div>
                             </span>
                           </li>
                         ))}
@@ -333,6 +341,20 @@ export default function ChatPage() {
               </div>
             )
           )}
+          {showReportBanner && (
+            <div className="flex w-full max-w-[90%] flex-col gap-2 rounded-2xl border border-brand-pink/30 bg-brand-pink-light p-4 shadow-sm">
+              <p className="text-body-md font-body-md text-on-surface">
+                지금까지 상담하신 내용을 바탕으로 자산 현황과 리포트를 정리해드릴까요?
+              </p>
+              <Link
+                href={`/report?session_id=${sessionIdRef.current}`}
+                className="self-start rounded-full bg-brand-pink px-4 py-2 text-label-sm font-bold text-white transition-colors hover:opacity-90"
+              >
+                상담 리포트 보기
+              </Link>
+            </div>
+          )}
+
           <div ref={scrollAnchorRef} />
         </div>
 
