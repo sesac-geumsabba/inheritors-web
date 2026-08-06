@@ -13,6 +13,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 
+from app.lexguard_client import lexguard_client
 from app.mcp_client import mcp_client
 
 SYSTEM_PROMPT = """당신은 신탁, 상속, 증여 분야의 법률 검색 도구 선택 에이전트다.
@@ -105,7 +106,7 @@ async def select_and_run(query: str) -> tuple[list[dict], set[str], list[dict]]:
     if not tool_calls:
         return [], set(), []
 
-    tasks = []
+    calls: list[tuple[str, str]] = []  # (mcp_name, tool_query), gather와 같은 순서로 짝을 맞춤
     called_tools: set[str] = set()
     tool_calls_used: list[dict] = []
     seen_calls: set[tuple[str, str]] = set()
@@ -129,25 +130,42 @@ async def select_and_run(query: str) -> tuple[list[dict], set[str], list[dict]]:
             continue
         seen_calls.add(call_key)
 
-        if mcp_name == "search_law":
-            tasks.append(mcp_client.search_law(tool_query))
-        else:
-            tasks.append(mcp_client.search_decisions(tool_query))
+        calls.append(call_key)
         called_tools.add(mcp_name)
         tool_calls_used.append({"tool": mcp_name, "query": tool_query})
         print(f"mcp_agent tool={mcp_name} query=\"{tool_query}\"")
 
-    if not tasks:
+    if not calls:
         return [], set(), []
 
+    tasks = [
+        mcp_client.search_law(q) if name == "search_law" else mcp_client.search_decisions(q)
+        for name, q in calls
+    ]
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
     sources: list[dict] = []
-    for result in results:
+    fallback_tasks: list = []
+    for (mcp_name, tool_query), result in zip(calls, results):
         if isinstance(result, BaseException):
             print(f"[error] mcp_agent MCP 호출 실패: {result}")
-            continue
-        sources.extend(item for item in result if item.get("score", 0) > 0)
+            result = []
+        filtered = [item for item in result if item.get("score", 0) > 0]
+        if filtered:
+            sources.extend(filtered)
+        elif mcp_name == "search_decisions":
+            # korean-law-mcp가 판례를 못 찾았을 때만 lexguard-mcp로 보완 — 법령 검색은 아직
+            # lexguard-mcp에 동일한 키워드 검색 tool이 없어(legal_qa_tool은 응답 구조가 달라
+            # 별도 파싱 필요) 폴백 대상에서 제외.
+            fallback_tasks.append(lexguard_client.search_decisions(tool_query))
+
+    if fallback_tasks:
+        fallback_results = await asyncio.gather(*fallback_tasks, return_exceptions=True)
+        for result in fallback_results:
+            if isinstance(result, BaseException):
+                print(f"[error] mcp_agent lexguard-mcp 폴백 호출 실패: {result}")
+                continue
+            sources.extend(item for item in result if item.get("score", 0) > 0)
 
     print(f"mcp_agent called_tools={sorted(called_tools)} results={len(sources)}")
     return sources, called_tools, tool_calls_used
