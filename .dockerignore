@@ -1,0 +1,27 @@
+# 빌드 컨텍스트가 리포 루트라(apps/web, apps/api Dockerfile 둘 다 infra/docker-compose*.yml
+# 기준 context: ../) 여기서 걸러야 두 이미지 빌드 모두에 적용된다.
+#
+# .env는 .gitignore에도 있어 CI 체크아웃엔 안 잡히지만, 로컬에서 docker build를 돌리면
+# COPY apps/api/ . 이 진짜 비밀키가 든 .env까지 그대로 이미지 레이어에 박아버린다 —
+# 반드시 여기서도 막아야 함(실측: .dockerignore가 아예 없어서 이 구멍이 열려있었음).
+.env
+.env.*
+!.env.example
+
+.git/
+node_modules/
+.next/
+.turbo/
+*.tsbuildinfo
+__pycache__/
+*.pyc
+.venv/
+venv/
+.DS_Store
+
+# 각 Dockerfile이 COPY로 필요한 파일만 명시적으로 골라 담으므로 문서/테스트/설계 자산은
+# 이미지에 필요 없다 — 빌드 컨텍스트 전송 크기도 줄고(로컬 dev에서 체감), 실수로
+# COPY apps/api/ . 에 tests/가 딸려 들어가는 것도 막는다.
+docs/
+apps/api/tests/
+infra/

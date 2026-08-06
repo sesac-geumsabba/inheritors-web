@@ -53,8 +53,11 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ steps.version.outputs.tag }}
             ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:staging
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # scope를 이미지별로 나눠야 한다 — 기본 scope(공용)를 매트릭스 두 잡이 같이
+          # 쓰면 web/api 캐시가 서로를 밀어내서(실측: 두 번째 빌드도 다시 느려짐) 매번
+          # 사실상 캐시 없는 빌드가 된다.
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
 
   # 이미지가 :staging 태그로 올라간 뒤 EC2에 SSH로 붙어 pull + up -d만 실행한다.
   # 리포 전체를 clone할 필요 없음 — 이미지는 GHCR에서 pull하므로 EC2_APP_DIR엔

@@ -36,6 +36,14 @@ origin(`https://www.theinheritors.site/api/...`)을 거치도록 강제한 것. 
 - `<run_number>-<short_sha>` — 이 빌드를 유일하게 가리키는 버전 태그. 특정 버전 고정 배포/롤백용.
 - `staging` — 이 워크플로가 마지막으로 성공한 빌드를 가리키는 floating 태그. 평소 배포는 이걸 pull.
 
+빌드 러너는 EC2(arm64/Graviton)와 맞춘 네이티브 `ubuntu-24.04-arm`. GHA 레이어 캐시는
+이미지별로 `scope`를 나눴다 — 공용 scope로 두면 web/api 캐시가 서로를 밀어내서 매번
+사실상 캐시 없는 빌드가 된다(실측). `apps/api/Dockerfile`은 멀티스테이지 + PyTorch
+CPU 전용 인덱스(`--extra-index-url .../whl/cpu`)로 sentence-transformers가 끌고오는
+torch를 CUDA 없이 설치 — 안 쓰는 nvidia-* 패키지가 딸려 들어가 이미지가 5.5GB까지
+부풀던 걸 1.5GB로 줄임(실측). 루트 `.dockerignore`가 `.env`/`tests/`/`docs/` 등을
+빌드 컨텍스트에서 걸러낸다.
+
 **필요한 저장소 설정** (최초 1회, GitHub repo → Settings):
 - Settings → Actions → General → Workflow permissions → **Read and write permissions**
   (GITHUB_TOKEN으로 GHCR에 push하려면 필요)
