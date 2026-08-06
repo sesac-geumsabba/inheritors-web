@@ -211,10 +211,10 @@ export default function ChatPage() {
   const showReportBanner = userTurnCount >= REPORT_TURN_THRESHOLD && sessionIdRef.current != null;
 
   return (
-    <div className="flex min-h-[max(884px,100dvh)] flex-col bg-surface-container-lowest">
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-surface-container-lowest">
       <TopAppBar />
 
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col overflow-hidden pb-[72px] pt-touch-target-min md:my-8 md:rounded-2xl md:border md:border-outline-variant md:pb-0 md:pt-0 md:shadow-lg">
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col overflow-hidden bg-surface-container-lowest pt-touch-target-min pb-[148px] md:my-8 md:rounded-2xl md:border md:border-outline-variant md:pb-0 md:pt-0 md:shadow-lg">
         {/* Viewing Area (Top) - Chat History */}
         <div
           ref={scrollContainerRef}
@@ -358,8 +358,11 @@ export default function ChatPage() {
           <div ref={scrollAnchorRef} />
         </div>
 
-        {/* Interaction Area (Bottom) */}
-        <div className="z-10 w-full border-t border-outline-variant bg-surface p-gutter">
+        {/* Interaction Area (Bottom) - Fixed above BottomNavBar on mobile */}
+        <div
+          style={{ fontSize: "16px" }}
+          className="fixed bottom-[72px] left-0 z-40 w-full border-t border-outline-variant bg-surface-container-lowest p-gutter md:static md:bottom-auto md:z-10"
+        >
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -374,7 +377,7 @@ export default function ChatPage() {
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="메시지를 입력하세요..."
                 disabled={isStreaming}
-                className="h-[52px] w-full rounded-full border-2 border-outline-variant bg-surface-container-lowest px-4 text-on-surface shadow-sm outline-none placeholder:text-outline focus:border-primary-container disabled:opacity-60 text-body-md font-body-md"
+                className="h-[52px] w-full rounded-full border-2 border-outline-variant bg-surface-container-lowest px-4 text-on-surface shadow-sm outline-none placeholder:text-outline focus:border-primary-container disabled:opacity-60 text-[18px] leading-[28px] font-body-md"
               />
             </div>
             <button

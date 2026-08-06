@@ -15,7 +15,10 @@ export default function BottomNavBar() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 z-50 flex h-[72px] w-full items-center justify-around rounded-t-xl border-t border-outline-variant bg-surface px-gutter pb-2 pt-2 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] md:hidden">
+    <nav
+      style={{ fontSize: "16px" }}
+      className="fixed bottom-0 left-0 z-50 flex h-[72px] w-full items-center justify-around rounded-t-xl border-t border-outline-variant bg-surface px-gutter pb-2 pt-2 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] md:hidden"
+    >
       {TABS.map((tab) => {
         const active = tab.href !== null && tab.href === pathname;
         const className = active
@@ -24,7 +27,7 @@ export default function BottomNavBar() {
         const content = (
           <>
             <span className={`material-symbols-outlined mb-1 ${active ? "icon-fill" : ""}`}>{tab.icon}</span>
-            <span className={`text-label-sm font-label-sm ${active ? "font-bold" : ""}`}>{tab.label}</span>
+            <span className={`text-[14px] leading-[20px] font-label-sm ${active ? "font-bold" : ""}`}>{tab.label}</span>
           </>
         );
 
