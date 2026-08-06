@@ -1,0 +1,22 @@
+[
+  {"id": 1, "category": "daily_life", "query": "오늘 저녁 메뉴로 뭘 먹는 게 좋을까요?"},
+  {"id": 2, "category": "daily_life", "query": "서울에서 부산까지 KTX로 얼마나 걸리나요?"},
+  {"id": 3, "category": "daily_life", "query": "강아지가 초콜릿을 먹으면 왜 위험한가요?"},
+  {"id": 4, "category": "daily_life", "query": "여름철 에어컨 전기요금을 줄이는 방법을 알려주세요."},
+  {"id": 5, "category": "daily_life", "query": "친구 생일에 줄 만한 선물을 추천해주세요."},
+  {"id": 6, "category": "it_science", "query": "파이썬에서 리스트와 튜플의 차이는 무엇인가요?"},
+  {"id": 7, "category": "it_science", "query": "Docker와 가상환경은 어떻게 다른가요?"},
+  {"id": 8, "category": "it_science", "query": "태양계에서 가장 큰 행성은 무엇인가요?"},
+  {"id": 9, "category": "it_science", "query": "영어 회화를 잘하려면 어떻게 공부해야 하나요?"},
+  {"id": 10, "category": "it_science", "query": "머신러닝에서 과적합이 무엇인지 설명해주세요."},
+  {"id": 11, "category": "general_finance", "query": "지금 테슬라 주식을 사도 괜찮을까요?"},
+  {"id": 12, "category": "general_finance", "query": "원·달러 환율이 오르면 우리 생활에 어떤 영향을 주나요?"},
+  {"id": 13, "category": "general_finance", "query": "신용카드를 여러 개 만들면 신용점수가 떨어지나요?"},
+  {"id": 14, "category": "general_finance", "query": "비트코인 가격은 앞으로 오를까요?"},
+  {"id": 15, "category": "general_finance", "query": "주택담보대출의 고정금리와 변동금리는 어떻게 다른가요?"},
+  {"id": 16, "category": "keyword_trap", "query": "드라마 ‘상속자들’의 줄거리를 알려주세요."},
+  {"id": 17, "category": "keyword_trap", "query": "파이썬 클래스의 상속이 무엇인지 설명해주세요."},
+  {"id": 18, "category": "keyword_trap", "query": "부모의 키는 자녀에게 어떻게 유전되어 상속되나요?"},
+  {"id": 19, "category": "keyword_trap", "query": "일제강점기 이후 논의된 신탁통치가 무엇인가요?"},
+  {"id": 20, "category": "keyword_trap", "query": "영어 단어 `trust`를 ‘신탁’이 아닌 ‘신뢰’라는 의미로 사용한 예문을 만들어주세요."}
+]
