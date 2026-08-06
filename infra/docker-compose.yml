@@ -19,13 +19,26 @@ services:
     env_file:
       - ../apps/api/.env
     environment:
-      # .env의 OLLAMA_BASE_URL(로컬 개발용 localhost)을 컨테이너 네트워크용으로 덮어씀 —
-      # api 컨테이너 안에서 localhost는 자기 자신이라 옆 컨테이너인 ollama를 못 찾는다.
+      # .env의 OLLAMA_BASE_URL/LEXGUARD_MCP_URL(로컬 개발용 localhost)을 컨테이너 네트워크용으로
+      # 덮어씀 — api 컨테이너 안에서 localhost는 자기 자신이라 옆 컨테이너를 못 찾는다.
       - OLLAMA_BASE_URL=http://ollama:11434
+      - LEXGUARD_MCP_URL=http://lexguard-mcp:9099/mcp
     depends_on:
       - ollama
+      - lexguard-mcp
     # DB는 단일 인스턴스(Supabase 등)를 DATABASE_URL로 연결
     # 법원/법제처 API 키도 이 env_file에서 관리
+
+  lexguard-mcp:
+    # korean-law-mcp(위 api 컨테이너 안에서 실행)가 판례를 못 찾을 때만 쓰는 폴백 서버
+    # (apps/api/app/lexguard_client.py). 이 저장소에 벤더링하지 않고 Docker의 git remote
+    # context 기능으로 바로 빌드 — 서브모듈/코드 복사 없이 최신 upstream을 그대로 씀.
+    build:
+      context: https://github.com/SeoNaRu/lexguard-mcp.git
+    env_file:
+      - ../apps/api/.env   # LAW_API_KEY만 씀 (open.law.go.kr에서 별도 발급 필요)
+    ports:
+      - "127.0.0.1:9099:9099"
 
   ollama:
     # 답변 생성 모델(EEVE-Korean 10.8B Q4, ~6.5GB)이 이미지에 미리 구워져 있어(infra/ollama/Dockerfile,
